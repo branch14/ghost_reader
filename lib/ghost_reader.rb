@@ -2,9 +2,10 @@ module GhostReader
   class Backend
     include I18n::Backend::Simple::Implementation
 
-    def initialize(url, default_backend=nil)
+    def initialize(url, opts={})
       @url=url
-      @default_backend=default_backend
+      @default_backend=opts[:default_backend]
+      @wait_time=opts[:wait_time] || 30
       @hits={}
       @misses={}
       @last_server_call=0
@@ -35,7 +36,7 @@ module GhostReader
 
     # contact server and exchange data if last call is more than 30 seconds
     def call_server
-      return if Time.now.to_i-@last_server_call<30
+      return if Time.now.to_i-@last_server_call<@wait_time
 
       miss_data = calc_miss_data()
 
