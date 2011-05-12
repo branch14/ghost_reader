@@ -1,3 +1,7 @@
+require 'i18n'
+require 'net/http'
+require 'json'
+
 module GhostReader
   class Backend
     include I18n::Backend::Simple::Implementation
@@ -46,8 +50,7 @@ module GhostReader
         req=Net::HTTP::Post.new(url.path)
         req['If-Modified-Since']=@last_version
         req.set_form_data({:hits=>@hits.to_json,
-                           :miss=>miss_data.to_json,
-                           :last_read=>@last_version})
+                           :miss=>miss_data.to_json})
         res = Net::HTTP.new(url.host, url.port).start do |http|
           http.request(req)
         end
@@ -57,10 +60,17 @@ module GhostReader
             @last_version=res["last-modified"]
         end
       else
-        opened = open(@url) { |f|
-          @store=YAML.load(f)
-          @last_version= f.last_modified
-        }
+        url=URI.parse(@url)
+        req=Net::HTTP::Get.new(url.path)
+        req['If-Modified-Since']=@last_version if @last_version
+        res = Net::HTTP.new(url.host, url.port).start do |http|
+          http.request(req)
+        end
+        case res
+          when Net::HTTPSuccess
+            @store=YAML.load(res.body.to_s)
+            @last_version=res["last-modified"]
+        end
       end
 
       @hits={}
