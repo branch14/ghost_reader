@@ -9,6 +9,11 @@ class GhostHandler<Mongrel::HttpHandler
   def initialize
     @request_count=0
     @not_modified=false
+    @modified_value='not_modified'
+  end
+
+  def modified=(value)
+    @modified_value=value
   end
 
   def request_count
@@ -51,7 +56,8 @@ class GhostHandler<Mongrel::HttpHandler
         # Put data for Client
         out.write({
                           'en'=>{
-                                  'test'=>'hello'+(@request_count+=1).to_s
+                                  'test'=>'hello'+(@request_count+=1).to_s,
+                                  'modified'=>@modified_value
                           }
                   }.to_yaml)
       end

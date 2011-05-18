@@ -13,12 +13,14 @@ module GhostReader
       @hits={}
       @misses={}
       @last_server_call=0
+      # initiates first call for filling caches in background
+      call_server
     end
 
     # calculates data about cache-miss for server
-    def calc_miss_data
+    def calc_miss_data(misses)
       miss_data={}
-      @misses.each_pair do |key, key_data|
+      misses.each_pair do |key, key_data|
         key_result={}
         miss_data[key]=key_result
         if @default_backend
@@ -38,44 +40,60 @@ module GhostReader
       miss_data
     end
 
-    # contact server and exchange data if last call is more than 30 seconds
+    # contact server and exchange data if last call is more than @wait_time
+    #seconds
     def call_server
+      if @bg_thread && (not @bg_thread.alive?)
+        # get the values from the last call
+        @store=@bg_thread[:store]
+        @last_version=@bg_thread[:last_version]
+        @bg_thread = nil
+      end
       return if Time.now.to_i-@last_server_call<@wait_time
 
-      miss_data = calc_miss_data()
-
-      if @misses.size>0 || @hits.size>0
-
-        url=URI.parse(@url)
-        req=Net::HTTP::Post.new(url.path)
-        req['If-Modified-Since']=@last_version
-        req.set_form_data({:hits=>@hits.to_json,
-                           :miss=>miss_data.to_json})
-        res = Net::HTTP.new(url.host, url.port).start do |http|
-          http.request(req)
-        end
-        case res
-          when Net::HTTPSuccess
-            @store=YAML.load(res.body.to_s)
-            @last_version=res["last-modified"]
-        end
-      else
-        url=URI.parse(@url)
-        req=Net::HTTP::Get.new(url.path)
-        req['If-Modified-Since']=@last_version if @last_version
-        res = Net::HTTP.new(url.host, url.port).start do |http|
-          http.request(req)
-        end
-        case res
-          when Net::HTTPSuccess
-            @store=YAML.load(res.body.to_s)
-            @last_version=res["last-modified"]
-        end
-      end
-
+      # dont start more than one background_thread
+      return if @bg_thread && @bg_thread.alive?
+      # take the needed Values and give it to the thread
+      misses=@misses
+      hits=@hits
+      # make new empty values for collecting statistics
       @hits={}
       @misses={}
       @last_server_call=Time.now.to_i
+
+      @bg_thread=Thread.new(misses, hits) do
+        miss_data = calc_miss_data(misses)
+
+        if miss_data.size>0 || hits.size>0
+
+          url=URI.parse(@url)
+          req=Net::HTTP::Post.new(url.path)
+          req['If-Modified-Since']=@last_version
+          req.set_form_data({:hits=>hits.to_json,
+                             :miss=>miss_data.to_json})
+          res = Net::HTTP.new(url.host, url.port).start do |http|
+            http.request(req)
+          end
+          case res
+            when Net::HTTPSuccess
+              Thread.current[:store]=YAML.load(res.body.to_s)
+              Thread.current[:last_version]=res["last-modified"]
+          end
+        else
+          url=URI.parse(@url)
+          req=Net::HTTP::Get.new(url.path)
+          req['If-Modified-Since']=@last_version if @last_version
+          res = Net::HTTP.new(url.host, url.port).start do |http|
+            http.request(req)
+          end
+          case res
+            when Net::HTTPSuccess
+              Thread.current[:store]=YAML.load(res.body.to_s)
+              Thread.current[:last_version]=res["last-modified"]
+          end
+        end
+      end
+
     end
 
     # counts a hit to a key
