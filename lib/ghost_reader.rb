@@ -111,7 +111,7 @@ module GhostReader
         _key = _key.to_s
         unless result.is_a?(Hash) && result.has_key?(_key)
           inc_miss locale.to_s, key.to_s
-          return nil
+          return @default_backend.lookup locale, key
         end
         result = result[_key]
         result
