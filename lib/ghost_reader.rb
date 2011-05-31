@@ -137,17 +137,18 @@ module GhostReader
       init_translations unless initialized?
       call_server
       keys = I18n.normalize_keys(locale, key, scope, options[:separator])
+      full_key=keys[1, keys.length-1].join('.')
 
       found_value=keys.inject(@store) do |result, _key|
         _key = _key.to_s
         unless result.is_a?(Hash) && result.has_key?(_key)
-          inc_miss locale.to_s, key.to_s
-          return @default_backend.lookup locale, key
+          inc_miss locale.to_s, full_key.to_s
+          return @default_backend.lookup locale, full_key
         end
         result = result[_key]
         result
       end
-      inc_hit key.to_s
+      inc_hit full_key.to_s
       found_value
     end
   end
