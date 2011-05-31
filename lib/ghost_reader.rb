@@ -40,6 +40,37 @@ module GhostReader
       miss_data
     end
 
+    def load_yaml_from_ghostwriter
+      response = call_get_on_ghostwriter
+      case response
+        when Net::HTTPSuccess
+          return YAML.load(response.body.to_s)
+      end
+      {}
+    end
+
+    def call_get_on_ghostwriter
+      url=URI.parse(@url)
+      req=Net::HTTP::Get.new(url.path)
+      req['If-Modified-Since']=@last_version if @last_version
+      res = Net::HTTP.new(url.host, url.port).start do |http|
+        http.request(req)
+      end
+      res
+    end
+
+    def call_put_on_ghostwriter(hits, miss_data)
+      url=URI.parse(@url)
+      req=Net::HTTP::Post.new(url.path)
+      req['If-Modified-Since']=@last_version
+      req.set_form_data({:hits=>hits.to_json,
+                         :miss=>miss_data.to_json})
+      res = Net::HTTP.new(url.host, url.port).start do |http|
+        http.request(req)
+      end
+      res
+    end
+
     # contact server and exchange data if last call is more than @wait_time
     #seconds
     def call_server
@@ -65,32 +96,14 @@ module GhostReader
         miss_data = calc_miss_data(misses)
 
         if miss_data.size>0 || hits.size>0
-
-          url=URI.parse(@url)
-          req=Net::HTTP::Post.new(url.path)
-          req['If-Modified-Since']=@last_version
-          req.set_form_data({:hits=>hits.to_json,
-                             :miss=>miss_data.to_json})
-          res = Net::HTTP.new(url.host, url.port).start do |http|
-            http.request(req)
-          end
-          case res
-            when Net::HTTPSuccess
-              Thread.current[:store]=YAML.load(res.body.to_s)
-              Thread.current[:last_version]=res["last-modified"]
-          end
+          res = call_put_on_ghostwriter(hits, miss_data)
         else
-          url=URI.parse(@url)
-          req=Net::HTTP::Get.new(url.path)
-          req['If-Modified-Since']=@last_version if @last_version
-          res = Net::HTTP.new(url.host, url.port).start do |http|
-            http.request(req)
-          end
-          case res
-            when Net::HTTPSuccess
-              Thread.current[:store]=YAML.load(res.body.to_s)
-              Thread.current[:last_version]=res["last-modified"]
-          end
+          res = call_get_on_ghostwriter()
+        end
+        case res
+          when Net::HTTPSuccess
+            Thread.current[:store]=YAML.load(res.body.to_s)
+            Thread.current[:last_version]=res["last-modified"]
         end
       end
 
