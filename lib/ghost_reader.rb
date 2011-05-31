@@ -151,4 +151,10 @@ module GhostReader
       found_value
     end
   end
+  class Railtie < ::Rails::Railtie
+    rake_tasks do
+      load "tasks/ghost_reader.rake"
+    end
+  end
+
 end
