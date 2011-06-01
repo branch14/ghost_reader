@@ -84,4 +84,19 @@ describe "Ghost Reader" do
     sleep 2
     I18n.t('modified').should == "not_modified"
   end
+  it('can push all data from Backend to server') {
+    I18n.backend.push_all_backend_data
+    @handler.last_miss.should == {
+            "notfound"=>{
+                    "default"=>{
+                            "de"=>"Nicht gefunden",
+                            "en"=>"Not found"}
+            },
+            'scoped.fallback'=>{
+                    'default'=>{
+                            'en'=>'fallback_value'
+                    }
+            }
+    }
+  }
 end

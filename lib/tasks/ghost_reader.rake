@@ -20,4 +20,14 @@ namespace :ghost_reader do
       end
     end
   end
+
+  desc "Push all locally configured translations to ghost-writer"
+  task :push => :environment do
+    unless I18n.backend.respond_to? :push_all_backend_data
+      raise "ERROR: Ghostwriter is not configured as I18n.backend"
+    end
+    puts "Pushing data to Ghostwriter"
+    I18n.backend.push_all_backend_data
+  end
+
 end

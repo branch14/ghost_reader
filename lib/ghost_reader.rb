@@ -71,6 +71,37 @@ module GhostReader
       res
     end
 
+    def push_all_backend_data
+      unless @default_backend && @default_backend.respond_to?(:get_all_data)
+        puts "Default Backend not support reading all Data"
+        return
+      end
+      miss_data={}
+
+      @default_backend.get_all_data.each_pair do |locale, entries|
+        collect_backend_data(entries, locale, [], miss_data)
+      end
+      call_put_on_ghostwriter({}, miss_data)
+    end
+
+    def collect_backend_data(entries, locale, base_chain, miss_data)
+      entries.each_pair do |key, sub_entries|
+        key_data=[base_chain, [key.to_s]].flatten
+        case sub_entries
+          when String
+            key_string=key_data.join '.'
+            key_data=miss_data[key_string]
+            unless key_data
+              key_data={'default'=>{}}
+              miss_data[key_string]=key_data
+            end
+            key_data['default'][locale.to_s]=sub_entries
+          when Hash
+            collect_backend_data sub_entries, locale, key_data, miss_data
+        end
+      end
+    end
+
     # contact server and exchange data if last call is more than @wait_time
     #seconds
     def call_server
@@ -157,6 +188,13 @@ module GhostReader
       rake_tasks do
         load "tasks/ghost_reader.rake"
       end
+    end
+  end
+
+  ::I18n::Backend::Simple::Implementation.module_eval do
+    def get_all_data
+      init_translation unless initialized?
+      translations
     end
   end
 end
