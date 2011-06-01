@@ -61,16 +61,20 @@ module GhostReader
     end
 
     def call_put_on_ghostwriter(hits, miss_data)
-      while hits.size>0 || miss_data.size>0
+      res=nil
+      while (hits.size>0 || miss_data.size>0) &&
+              (res==nil ||
+                      res.instance_of?(Net::HTTPSuccess)||
+                      res.instance_of?(Net::HTTPNotModified))
         call_entry_count=0
         part_hits={}
         part_miss={}
-        while(call_entry_count<@max_packet_size && hits.size>0)
+        while (call_entry_count<@max_packet_size && hits.size>0)
           entry=hits.shift
           part_hits[entry[0]]=entry[1]
           call_entry_count+=1
         end
-        while(call_entry_count<@max_packet_size && miss_data.size>0)
+        while (call_entry_count<@max_packet_size && miss_data.size>0)
           entry=miss_data.shift
           part_miss[entry[0]]=entry[1]
           call_entry_count+=1
@@ -97,7 +101,12 @@ module GhostReader
       @default_backend.get_all_data.each_pair do |locale, entries|
         collect_backend_data(entries, locale, [], miss_data)
       end
-      call_put_on_ghostwriter({}, miss_data)
+      last_res=call_put_on_ghostwriter({}, miss_data)
+      unless (last_res.instance_of?(Net::HTTPSuccess) ||
+              last_res.instance_of?(Net::HTTPNotModified))
+        puts "Unexpected Answer from Server"
+        puts "#{last_res.code}: #{last_res.message}"
+      end
     end
 
     def collect_backend_data(entries, locale, base_chain, miss_data)
