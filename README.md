@@ -19,3 +19,7 @@ Default-Value is 30
 ### default_backend
 The Ghost_reader tries to find default-values for not found translations and
 posts them to the server together with the statistical data.
+
+### max_packet_size
+For preventing Errors on receiving Server splits the ghost-reader the posts
+in parts with max max_packet_size count of keys

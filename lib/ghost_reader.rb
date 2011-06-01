@@ -10,6 +10,7 @@ module GhostReader
       @url=url
       @default_backend=opts[:default_backend]
       @wait_time=opts[:wait_time] || 30
+      @max_packet_size=opts[:max_packet_size] || 100
       @hits={}
       @misses={}
       @last_server_call=0
@@ -60,13 +61,28 @@ module GhostReader
     end
 
     def call_put_on_ghostwriter(hits, miss_data)
-      url=URI.parse(@url)
-      req=Net::HTTP::Post.new(url.path)
-      req['If-Modified-Since']=@last_version
-      req.set_form_data({:hits=>hits.to_json,
-                         :miss=>miss_data.to_json})
-      res = Net::HTTP.new(url.host, url.port).start do |http|
-        http.request(req)
+      while hits.size>0 || miss_data.size>0
+        call_entry_count=0
+        part_hits={}
+        part_miss={}
+        while(call_entry_count<@max_packet_size && hits.size>0)
+          entry=hits.shift
+          part_hits[entry[0]]=entry[1]
+          call_entry_count+=1
+        end
+        while(call_entry_count<@max_packet_size && miss_data.size>0)
+          entry=miss_data.shift
+          part_miss[entry[0]]=entry[1]
+          call_entry_count+=1
+        end
+        url=URI.parse(@url)
+        req=Net::HTTP::Post.new(url.path)
+        req['If-Modified-Since']=@last_version
+        req.set_form_data({:hits=>part_hits.to_json,
+                           :miss=>part_miss.to_json})
+        res = Net::HTTP.new(url.host, url.port).start do |http|
+          http.request(req)
+        end
       end
       res
     end
