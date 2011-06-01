@@ -64,8 +64,8 @@ module GhostReader
       res=nil
       while (hits.size>0 || miss_data.size>0) &&
               (res==nil ||
-                      res.instance_of?(Net::HTTPSuccess)||
-                      res.instance_of?(Net::HTTPNotModified))
+                      res.kind_of?(Net::HTTPSuccess)||
+                      res.kind_of?(Net::HTTPNotModified))
         call_entry_count=0
         part_hits={}
         part_miss={}
@@ -102,8 +102,8 @@ module GhostReader
         collect_backend_data(entries, locale, [], miss_data)
       end
       last_res=call_put_on_ghostwriter({}, miss_data)
-      unless (last_res.instance_of?(Net::HTTPSuccess) ||
-              last_res.instance_of?(Net::HTTPNotModified))
+      unless (last_res.kind_of?(Net::HTTPSuccess) ||
+              last_res.kind_of?(Net::HTTPNotModified))
         puts "Unexpected Answer from Server"
         puts "#{last_res.code}: #{last_res.message}"
       end
