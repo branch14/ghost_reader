@@ -193,7 +193,7 @@ module GhostReader
 
   ::I18n::Backend::Simple::Implementation.module_eval do
     def get_all_data
-      init_translation unless initialized?
+      available_locales
       translations
     end
   end
