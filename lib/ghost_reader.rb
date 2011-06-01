@@ -149,7 +149,7 @@ module GhostReader
         end
         case res
           when Net::HTTPSuccess
-            Thread.current[:store]=YAML.load(res.body.to_s)
+            Thread.current[:store]=YAML.load(res.body.to_s).deep_symbolize_keys
             Thread.current[:last_version]=res["last-modified"]
         end
       end
@@ -187,7 +187,7 @@ module GhostReader
       full_key=keys[1, keys.length-1].join('.')
 
       found_value=keys.inject(@store) do |result, _key|
-        _key = _key.to_s
+        _key = _key.to_sym
         unless result.is_a?(Hash) && result.has_key?(_key)
           inc_miss locale.to_s, full_key.to_s
           return @default_backend.lookup locale, full_key

@@ -5,7 +5,19 @@ describe "Ghost Reader" do
 #    I18n.locale=:en
     fallback = I18n::Backend::Simple.new
     fallback.store_translations(:en, {:notfound=>'Not found',
-                                      :scoped=>{:fallback=>'fallback_value'}
+                                      :scoped=>{:fallback=>'fallback_value'},
+                                      :time=>{
+                                              :formats=>{
+                                                      :default=>'%Y-%d-%m'}
+                                      },
+                                      'activerecord'=>{
+                                              'errors'=>{
+                                                      'messages'=>{
+                                                              'even'=>'Even value'
+                                                      }
+                                              }
+                                      }
+
     })
     fallback.store_translations(:de, {:notfound=>'Nicht gefunden'})
     # Initializes a Handler
@@ -39,10 +51,35 @@ describe "Ghost Reader" do
     I18n.t('fallback', :scope=>'scoped').should == "fallback_value"
   end
 
+  it('can Handle scoped request in array-notation') do
+    I18n.t('fallback', :scope=>['scoped']).should == "fallback_value"
+  end
+
+  it('can handle bulk lookup') do
+    I18n.t([:odd, :even], :scope => 'activerecord.errors.messages').should ==
+            ['Odd value', 'Even value']
+  end
+
+  it('can handle interpolation') do
+    I18n.t(:thanks, :name=>'Jeremy').should == "Thanks Jeremy"
+  end
+
+  it('can handle pluralization') do
+    I18n.t(:inbox, :count=>2).should == "2 messages"
+  end
+
+  it('can handle a explicit locale') do
+    I18n.t(:thanks, :name=>'Jeremy', :locale=>:de).should == "Danke Jeremy"
+  end
+
+
+  it('can localize a time') do
+    Time.now.should_not == nil
+  end
+
   it('Cache miss not the fallback') {
     I18n.t('notfound').should == "Not found"
   }
-
 
   it('can translate the key "test" with a update-post') do
     sleep 2
@@ -51,7 +88,11 @@ describe "Ghost Reader" do
 
   it('hit recorded') do
     sleep 2
-    @handler.last_hits.should == {'test'=>1, 'scoped.test'=>1}
+    @handler.last_hits.should == {"thanks"=>2,
+                                  "scoped.test"=>1,
+                                  "inbox"=>1,
+                                  "activerecord.errors.messages.odd"=>1,
+                                  "test"=>1}
   end
 
   it('cache-miss with fallback-values') do
@@ -69,7 +110,15 @@ describe "Ghost Reader" do
                             'en'=>'fallback_value'
                     },
                     'count'=>{
-                            'en'=>1
+                            'en'=>2
+                    }
+            },
+            "activerecord.errors.messages.even"=>{
+                    "default"=>{
+                            "en"=>"Even value"
+                    },
+                    "count"=>{
+                            "en"=>1
                     }
             }
     }
@@ -98,6 +147,18 @@ describe "Ghost Reader" do
                             'en'=>'fallback_value'
                     },
                     'count'=>{}
+            },
+            "time.formats.default"=>{
+                    "default"=>{
+                            "en"=>"%Y-%d-%m"
+                    },
+                    "count"=>{}
+            },
+            "activerecord.errors.messages.even"=> {
+                    "default"=>{
+                            "en"=>"Even value"
+                    },
+                    "count"=>{}
             }
     }
   }

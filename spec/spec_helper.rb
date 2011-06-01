@@ -60,7 +60,23 @@ class GhostHandler<Mongrel::HttpHandler
                                   'modified'=>@modified_value,
                                   'scoped'=>{
                                           'test'=>'scoped_result'
+                                  },
+                                  'activerecord'=>{
+                                          'errors'=>{
+                                                  'messages'=>{
+                                                          'odd'=>'Odd value'
+                                                  }
+                                          }
+                                  },
+                                  'thanks'=>'Thanks %{name}',
+                                  'inbox'=>{
+                                          'one'=> '1 message',
+                                          'other'=>'%{count} messages'
                                   }
+                          },
+                          'de'=>{
+                                  'thanks'=>'Danke %{name}'
+
                           }
                   }.to_yaml)
       end
