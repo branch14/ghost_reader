@@ -108,7 +108,7 @@ module GhostReader
             key_string=key_data.join '.'
             key_data=miss_data[key_string]
             unless key_data
-              key_data={'default'=>{}}
+              key_data={'default'=>{}, 'count'=>{}}
               miss_data[key_string]=key_data
             end
             key_data['default'][locale.to_s]=sub_entries

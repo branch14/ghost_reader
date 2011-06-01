@@ -90,12 +90,14 @@ describe "Ghost Reader" do
             "notfound"=>{
                     "default"=>{
                             "de"=>"Nicht gefunden",
-                            "en"=>"Not found"}
+                            "en"=>"Not found"},
+                    'count'=>{}
             },
             'scoped.fallback'=>{
                     'default'=>{
                             'en'=>'fallback_value'
-                    }
+                    },
+                    'count'=>{}
             }
     }
   }
