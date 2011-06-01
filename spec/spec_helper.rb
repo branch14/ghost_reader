@@ -45,7 +45,7 @@ class GhostHandler<Mongrel::HttpHandler
     end
 
     if @not_modified
-      response.start(304)do |head, out|
+      response.start(304) do |head, out|
         out.write("")
       end
     else
@@ -57,7 +57,10 @@ class GhostHandler<Mongrel::HttpHandler
         out.write({
                           'en'=>{
                                   'test'=>'hello'+(@request_count+=1).to_s,
-                                  'modified'=>@modified_value
+                                  'modified'=>@modified_value,
+                                  'scoped'=>{
+                                          'test'=>'scoped_result'
+                                  }
                           }
                   }.to_yaml)
       end

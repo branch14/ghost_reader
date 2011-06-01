@@ -4,7 +4,9 @@ describe "Ghost Reader" do
   before(:all) do
 #    I18n.locale=:en
     fallback = I18n::Backend::Simple.new
-    fallback.store_translations(:en, {:notfound=>'Not found'})
+    fallback.store_translations(:en, {:notfound=>'Not found',
+                                      :scoped=>{:fallback=>'fallback_value'}
+    })
     fallback.store_translations(:de, {:notfound=>'Nicht gefunden'})
     # Initializes a Handler
     @handler=GhostHandler.new
@@ -30,6 +32,12 @@ describe "Ghost Reader" do
   it('can translate the key "test"') do
     I18n.t('test').should == "hello1"
   end
+  it('can handle scoped request') do
+    I18n.t('test', :scope=>'scoped').should == "scoped_result"
+  end
+  it('can handle scoped fallback') do
+    I18n.t('fallback', :scope=>'scoped').should == "fallback_value"
+  end
 
   it('Cache miss not the fallback') {
     I18n.t('notfound').should == "Not found"
@@ -43,16 +51,28 @@ describe "Ghost Reader" do
 
   it('hit recorded') do
     sleep 2
-    @handler.last_hits.should == {'test'=>1}
+    @handler.last_hits.should == {'test'=>1, 'scoped.test'=>1}
   end
 
   it('cache-miss with fallback-values') do
-    @handler.last_miss.should == {"notfound"=>{
-            "default"=>{
-                    "de"=>"Nicht gefunden",
-                    "en"=>"Not found"},
-            "count"=>{
-                    "en"=>1}}}
+    @handler.last_miss.should == {
+            "notfound"=>{
+                    "default"=>{
+                            "de"=>"Nicht gefunden",
+                            "en"=>"Not found"},
+                    "count"=>{
+                            "en"=>1
+                    }
+            },
+            'scoped.fallback'=>{
+                    'default'=>{
+                            'en'=>'fallback_value'
+                    },
+                    'count'=>{
+                            'en'=>1
+                    }
+            }
+    }
   end
 
   it('if-modified-since is set') do
