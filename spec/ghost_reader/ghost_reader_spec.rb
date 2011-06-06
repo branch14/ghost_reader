@@ -20,6 +20,7 @@ describe "Ghost Reader" do
 
     })
     fallback.store_translations(:de, {:notfound=>'Nicht gefunden'})
+    fallback.store_translations(:pt, {:dummy=>''})
     # Initializes a Handler
     @handler=GhostHandler.new
     # Start a Mongrel-Server for Testing Ghost Reader
@@ -159,7 +160,19 @@ describe "Ghost Reader" do
                             "en"=>"Even value"
                     },
                     "count"=>{}
+            },
+            'dummy'=>{
+                    'default'=>{
+                            'pt'=>''
+                    },
+                    'count'=>{}
             }
     }
+  }
+  it('can read availbale locales from default-Backend and from ghost-server') {
+    available_locales = I18n.backend.available_locales
+    available_locales.include?(:de).should == true
+    available_locales.include?(:pt).should == true
+    available_locales.include?(:es).should == true
   }
 end

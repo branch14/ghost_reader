@@ -77,7 +77,8 @@ class GhostHandler<Mongrel::HttpHandler
                           'de'=>{
                                   'thanks'=>'Danke %{name}'
 
-                          }
+                          },
+                          'es'=>{'dummy'=>'nothing'}
                   }.to_yaml)
       end
     end

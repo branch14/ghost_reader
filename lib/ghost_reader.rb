@@ -132,8 +132,10 @@ module GhostReader
     def call_server
       if @bg_thread && (not @bg_thread.alive?)
         # get the values from the last call
-        @store=@bg_thread[:store]
-        @last_version=@bg_thread[:last_version]
+        if @bg_thread[:store]
+          @store=@bg_thread[:store]
+          @last_version=@bg_thread[:last_version]
+        end
         @bg_thread = nil
       end
       return if Time.now.to_i-@last_server_call<@wait_time
@@ -166,7 +168,7 @@ module GhostReader
     end
 
     # counts a hit to a key
-    def inc_hit(key)
+    def inc_hit(key, options)
       if @hits[key]
         @hits[key]+=1
       else
@@ -175,7 +177,7 @@ module GhostReader
     end
 
     # counts a miss to a key and a locale
-    def inc_miss(locale, key)
+    def inc_miss(locale, key, options)
       if @misses[key]
         key_hash=@misses[key]
       else
@@ -192,21 +194,37 @@ module GhostReader
     def lookup(locale, key, scope = [], options = {})
       init_translations unless initialized?
       call_server
+
       keys = I18n.normalize_keys(locale, key, scope, options[:separator])
       full_key=keys[1, keys.length-1].join('.')
+      filtered_options=options.reject { |key, value| key.to_sym==:scope }
 
       found_value=keys.inject(@store) do |result, _key|
         _key = _key.to_sym
         unless result.is_a?(Hash) && result.has_key?(_key)
-          inc_miss locale.to_s, full_key.to_s
+          inc_miss locale.to_s, full_key.to_s, filtered_options
           return @default_backend.lookup locale, full_key
         end
         result = result[_key]
         result
       end
-      inc_hit full_key.to_s
+      inc_hit full_key.to_s, filtered_options
       found_value
     end
+
+    def available_locales
+      init_translations unless initialized?
+      call_server
+      locales=[]
+      if @default_backend
+        locales.concat @default_backend.available_locales
+      end
+      if @store
+        locales.concat @store.keys
+      end
+      locales.uniq
+    end
+
   end
   if defined?(Rails)
     class Railtie < ::Rails::Railtie
