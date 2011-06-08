@@ -126,7 +126,7 @@ describe "Ghost Reader" do
   end
 
   it('if-modified-since is set') do
-    @handler.last_params["HTTP_IF_MODIFIED_SINCE"].should_not == nil
+    @handler.last_params["HTTP_IF_MODIFIED_SINCE"].should_not be_nil
   end
   it('can translate the key "test" with a update-post') do
     @handler.not_modified=true
