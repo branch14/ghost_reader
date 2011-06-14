@@ -1,5 +1,6 @@
 require 'rubygems'
 require "webrick/httputils"
+require "bundler"
 
 Bundler.require(:default, :development)
 

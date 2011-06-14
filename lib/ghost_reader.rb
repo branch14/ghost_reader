@@ -60,7 +60,7 @@ module GhostReader
       res
     end
 
-    def call_put_on_ghostwriter(hits, miss_data)
+    def call_post_on_ghostwriter(hits, miss_data)
       res=nil
       while (hits.size>0 || miss_data.size>0) &&
               (res==nil ||
@@ -91,6 +91,7 @@ module GhostReader
       res
     end
 
+    # Should only be called from a rake task
     def push_all_backend_data
       unless @default_backend && @default_backend.respond_to?(:get_all_data)
         puts "Default Backend not support reading all Data"
@@ -101,7 +102,7 @@ module GhostReader
       @default_backend.get_all_data.each_pair do |locale, entries|
         collect_backend_data(entries, locale, [], miss_data)
       end
-      last_res=call_put_on_ghostwriter({}, miss_data)
+      last_res=call_post_on_ghostwriter({}, miss_data)
       unless (last_res.kind_of?(Net::HTTPSuccess) ||
               last_res.kind_of?(Net::HTTPNotModified))
         puts "Unexpected Answer from Server"
@@ -109,6 +110,7 @@ module GhostReader
       end
     end
 
+    # This is a procedure - requires miss_data to be defined as {}
     def collect_backend_data(entries, locale, base_chain, miss_data)
       entries.each_pair do |key, sub_entries|
         key_data=[base_chain, [key.to_s]].flatten
@@ -154,7 +156,7 @@ module GhostReader
         miss_data = calc_miss_data(misses)
 
         if miss_data.size>0 || hits.size>0
-          res = call_put_on_ghostwriter(hits, miss_data)
+          res = call_post_on_ghostwriter(hits, miss_data)
         else
           res = call_get_on_ghostwriter()
         end
