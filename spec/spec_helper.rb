@@ -73,6 +73,16 @@ class GhostHandler<Mongrel::HttpHandler
                                   'inbox'=>{
                                           'one'=> '1 message',
                                           'other'=>'%{count} messages'
+                                  },
+                                  'number'=>{
+                                          'human'=>{
+                                                  'format'=>{
+                                                          'delimiter'=>''
+                                                  }
+                                          },
+                                          'format'=>{
+                                                  'separator'=>'.'
+                                          }
                                   }
                           },
                           'de'=>{
@@ -84,4 +94,11 @@ class GhostHandler<Mongrel::HttpHandler
       end
     end
   end
+end
+#require 'active_support'
+#require 'action_view/helpers/number_helper'
+require 'action_view'
+
+class Helper
+  include ActionView::Helpers::NumberHelper
 end

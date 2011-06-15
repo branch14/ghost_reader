@@ -27,4 +27,5 @@ and updates with the ghost_server}
   s.add_development_dependency('rake')
   s.add_development_dependency('rspec')
   s.add_development_dependency('mongrel')
+  s.add_development_dependency('actionpack', '3.0.7')
 end

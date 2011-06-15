@@ -18,27 +18,97 @@ module GhostReader
       call_server
     end
 
+    # Add a new default value
+    def add_default_value(miss_data, available_locale, key, default_value,
+            count_data)
+      if default_value.is_a?(Hash)
+        default_value.each_pair do |entry_key, entry_value|
+          add_default_value(miss_data, available_locale,
+                            "#{key}.#{entry_key}", entry_value,
+                            count_data)
+        end
+      else
+        found_value=key.split(/\./).inject(@store[available_locale]) do |result, _key|
+          unless result.nil?
+            _key = _key.to_sym
+            result = result[_key]
+            result
+          end
+        end
+        if found_value.nil?
+          key_result = miss_data[key.to_s]
+          if key_result.nil?
+            key_result={:count=>count_data, :default=>{}}
+            miss_data[key.to_s]=key_result
+          end
+          key_result[:default][available_locale]=default_value
+        end
+      end
+    end
+
     # calculates data about cache-miss for server
     def calc_miss_data(misses)
       miss_data={}
       misses.each_pair do |key, key_data|
         key_result={}
-        miss_data[key]=key_result
+        count_data={}
+        key_data.each_pair do |locale, count|
+          count_data[locale.to_sym]=count
+        end
+        count_added=false
         if @default_backend
           default_data={}
           @default_backend.available_locales.each do |available_locale|
             default_value = @default_backend.lookup available_locale, key
-            default_data[available_locale]= default_value if default_value
+            unless default_value.nil?
+              count_added=true
+              add_default_value(miss_data, available_locale,
+                                key, default_value, count_data)
+            end
           end
-          key_result[:default]=default_data unless default_data.empty?
+#          key_result[:default]=default_data unless default_data.empty?
         end
-        count_data={}
-        key_result[:count]=count_data
-        key_data.each_pair do |locale, count|
-          count_data[locale.to_sym]=count
+        if not count_added
+          key_result[:count]=count_data
+          miss_data[key]=key_result
         end
       end
       miss_data
+    end
+
+    def collect_hit_values(key, value, count)
+      if value.is_a? Hash
+        ret={}
+        value.each_pair do |entry_key, entry_value|
+          ret.merge!(collect_hit_values("#{key}.#{entry_key}", entry_value,
+                                        count))
+        end
+        return ret
+      else
+        return {key=>count}
+      end
+    end
+
+    # distribute hit-data down to single keys
+    def calc_hit_data(hits)
+      return hits if @store.nil?
+      merged_languages=@store.keys.inject({}) do |result, key|
+        result=result.deep_merge(@store[key])
+        result
+      end
+      hit_data={}
+      hits.each_pair do |key, hit_count|
+        found_value=key.split(/\./).inject(merged_languages) do |result, _key|
+          unless result.nil?
+            _key = _key.to_sym
+            result = result[_key]
+            result
+          end
+        end
+        hit_data.merge! collect_hit_values key, found_value,
+                                           hit_count unless found_value.nil?
+      end
+      hit_data
     end
 
     def load_yaml_from_ghostwriter
@@ -60,7 +130,7 @@ module GhostReader
       res
     end
 
-    def call_post_on_ghostwriter(hits, miss_data)
+    def call_put_on_ghostwriter(hits, miss_data)
       res=nil
       while (hits.size>0 || miss_data.size>0) &&
               (res==nil ||
@@ -91,7 +161,6 @@ module GhostReader
       res
     end
 
-    # Should only be called from a rake task
     def push_all_backend_data
       unless @default_backend && @default_backend.respond_to?(:get_all_data)
         puts "Default Backend not support reading all Data"
@@ -102,7 +171,7 @@ module GhostReader
       @default_backend.get_all_data.each_pair do |locale, entries|
         collect_backend_data(entries, locale, [], miss_data)
       end
-      last_res=call_post_on_ghostwriter({}, miss_data)
+      last_res=call_put_on_ghostwriter({}, miss_data)
       unless (last_res.kind_of?(Net::HTTPSuccess) ||
               last_res.kind_of?(Net::HTTPNotModified))
         puts "Unexpected Answer from Server"
@@ -110,7 +179,6 @@ module GhostReader
       end
     end
 
-    # This is a procedure - requires miss_data to be defined as {}
     def collect_backend_data(entries, locale, base_chain, miss_data)
       entries.each_pair do |key, sub_entries|
         key_data=[base_chain, [key.to_s]].flatten
@@ -153,17 +221,23 @@ module GhostReader
       @last_server_call=Time.now.to_i
 
       @bg_thread=Thread.new(misses, hits) do
-        miss_data = calc_miss_data(misses)
+        begin
+          miss_data = calc_miss_data(misses)
+          hit_data = calc_hit_data(hits)
 
-        if miss_data.size>0 || hits.size>0
-          res = call_post_on_ghostwriter(hits, miss_data)
-        else
-          res = call_get_on_ghostwriter()
-        end
-        case res
-          when Net::HTTPSuccess
-            Thread.current[:store]=YAML.load(res.body.to_s).deep_symbolize_keys
-            Thread.current[:last_version]=res["last-modified"]
+          if miss_data.size>0 || hit_data.size>0
+            res = call_put_on_ghostwriter(hit_data, miss_data)
+          else
+            res = call_get_on_ghostwriter()
+          end
+          case res
+            when Net::HTTPSuccess
+              Thread.current[:store]=YAML.load(res.body.to_s).deep_symbolize_keys
+              Thread.current[:last_version]=res["last-modified"]
+          end
+        rescue Object => ex
+          puts "Exception ============================================"
+          pp ex
         end
       end
 
@@ -198,9 +272,12 @@ module GhostReader
       call_server
 
       keys = I18n.normalize_keys(locale, key, scope, options[:separator])
-      full_key=keys[1, keys.length-1].join('.')
       filtered_options=options.reject { |key, value| key.to_sym==:scope }
+      full_key=keys[1, keys.length-1].join('.')
+      lookup_key(locale, keys, full_key, filtered_options)
+    end
 
+    def lookup_key(locale, keys, full_key, filtered_options)
       found_value=keys.inject(@store) do |result, _key|
         _key = _key.to_sym
         unless result.is_a?(Hash) && result.has_key?(_key)
@@ -209,6 +286,13 @@ module GhostReader
         end
         result = result[_key]
         result
+      end
+      if found_value.is_a? Hash
+        default_values = @default_backend.lookup(locale, full_key)
+        if default_values
+          found_value=default_values.deep_merge(found_value)
+          inc_miss locale.to_s, full_key.to_s, filtered_options
+        end
       end
       inc_hit full_key.to_s, filtered_options
       found_value
