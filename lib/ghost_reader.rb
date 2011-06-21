@@ -295,7 +295,7 @@ module GhostReader
         end
       end
       inc_hit full_key.to_s, filtered_options
-      found_value
+      "<span title='#{full_key}'>#{found_value}</span>"
     end
 
     def available_locales
