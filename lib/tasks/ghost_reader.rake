@@ -18,7 +18,7 @@ namespace :ghost_reader do
                                 "#{key.to_s}.yml")
       begin
         puts "Deleting old translations: #{outfile}"
-        File.delete(outfile)
+        File.delete(outfile) if File.exists?(outfile)
       rescue Exception => e
         abort "Couldn't delete file: #{e.message}"
       end
