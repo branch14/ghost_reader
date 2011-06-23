@@ -5,8 +5,14 @@ namespace :ghost_reader do
     unless I18n.backend.respond_to? :load_yaml_from_ghostwriter
       raise "ERROR: Ghostwriter is not configured as I18n.backend"
     end
-    puts "Loading data from Ghostwriter and delete old translations"
-    yaml_data = I18n.backend.load_yaml_from_ghostwriter
+
+    begin
+      puts "Loading data from Ghostwriter and delete old translations"
+      yaml_data = I18n.backend.load_yaml_from_ghostwriter
+    rescue Exception => e
+      abort e.message
+    end
+
     yaml_data.each_pair do |key,value|
       outfile = Rails.root.join("config", "locales",
                                 "#{key.to_s}.yml")
@@ -14,7 +20,7 @@ namespace :ghost_reader do
         puts "Deleting old translations: #{outfile}"
         File.delete(outfile)
       rescue Exception => e
-        puts "Couldn't delete file: #{e.message}"
+        abort "Couldn't delete file: #{e.message}"
       end
 
       begin
@@ -23,7 +29,7 @@ namespace :ghost_reader do
           yaml_file.write({key => value}.to_yaml)
         end
       rescue Exception => e
-        puts "Couldn't write file: #{e.message}"
+        abort "Couldn't write file: #{e.message}"
       end
     end
   end
@@ -34,7 +40,11 @@ namespace :ghost_reader do
       raise "ERROR: Ghostwriter is not configured as I18n.backend"
     end
     puts "Pushing data to Ghostwriter"
-    I18n.backend.push_all_backend_data
+    begin
+      I18n.backend.push_all_backend_data
+    rescue Exception => e
+      abort e.message
+    end
   end
 
 end
