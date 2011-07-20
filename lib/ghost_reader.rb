@@ -324,8 +324,7 @@ module GhostReader
     # Simple logs messages to console if enabled
     def log(message)
       if @trace
-        #@trace.call "#{Time.now.strftime("%Y-%m-%d %H:%M:%S")}: #{message}"
-        @trace.call message
+        @trace.call "#{Time.now.strftime("%Y-%m-%d %H:%M:%S")}: Ghost_Reader: #{message}"
       end
     end
 
