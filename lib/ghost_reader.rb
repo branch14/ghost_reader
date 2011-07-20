@@ -6,19 +6,26 @@ module GhostReader
   class Backend
     include I18n::Backend::Simple::Implementation
 
-    def initialize(url, opts={})
+    def initialize(url, opts={}, &block)
       @url=url
       @default_backend=opts[:default_backend]
       @wait_time=opts[:wait_time] || 30
       @max_packet_size=opts[:max_packet_size] || 100
+      @trace=opts[:trace]
       @hits={}
       @misses={}
       @last_server_call=0
-      # initiates first call for filling caches in background
-      call_server
+        # initiates first call for filling caches in background
+      if defined?(PhusionPassenger)
+        # In Passenger load data in foreground
+        @store=load_yaml_from_ghostwriter
+      else
+        # Elsewhere load data in Background
+        call_server
+      end
     end
 
-    # Add a new default value
+      # Add a new default value
     def add_default_value(miss_data, available_locale, key, default_value,
             count_data)
       if default_value.is_a?(Hash)
@@ -46,7 +53,7 @@ module GhostReader
       end
     end
 
-    # calculates data about cache-miss for server
+      # calculates data about cache-miss for server
     def calc_miss_data(misses)
       miss_data={}
       misses.each_pair do |key, key_data|
@@ -89,7 +96,7 @@ module GhostReader
       end
     end
 
-    # distribute hit-data down to single keys
+      # distribute hit-data down to single keys
     def calc_hit_data(hits)
       return hits if @store.nil?
       merged_languages=@store.keys.inject({}) do |result, key|
@@ -124,9 +131,11 @@ module GhostReader
       url=URI.parse(@url)
       req=Net::HTTP::Get.new(url.path)
       req['If-Modified-Since']=@last_version if @last_version
+      log "Get start"
       res = Net::HTTP.new(url.host, url.port).start do |http|
         http.request(req)
       end
+      log "Get returned with #{res.code}"
       res
     end
 
@@ -154,9 +163,11 @@ module GhostReader
         req['If-Modified-Since']=@last_version
         req.set_form_data({:hits=>part_hits.to_json,
                            :miss=>part_miss.to_json})
+        log "Post start"
         res = Net::HTTP.new(url.host, url.port).start do |http|
           http.request(req)
         end
+        log "Post returned with #{res.code}"
       end
       res
     end
@@ -197,25 +208,26 @@ module GhostReader
       end
     end
 
-    # contact server and exchange data if last call is more than @wait_time
-    #seconds
+      # contact server and exchange data if last call is more than @wait_time
+      #seconds
     def call_server
-      if @bg_thread && (not @bg_thread.alive?)
+      if @bg_thread
+        # dont start more than one background_thread
+        return if @bg_thread.alive?
         # get the values from the last call
         if @bg_thread[:store]
           @store=@bg_thread[:store]
           @last_version=@bg_thread[:last_version]
         end
         @bg_thread = nil
+        #return
       end
       return if Time.now.to_i-@last_server_call<@wait_time
 
-      # dont start more than one background_thread
-      return if @bg_thread && @bg_thread.alive?
       # take the needed Values and give it to the thread
       misses=@misses
       hits=@hits
-      # make new empty values for collecting statistics
+        # make new empty values for collecting statistics
       @hits={}
       @misses={}
       @last_server_call=Time.now.to_i
@@ -236,14 +248,13 @@ module GhostReader
               Thread.current[:last_version]=res["last-modified"]
           end
         rescue Object => ex
-          puts "Exception ============================================"
-          pp ex
+          puts "Exception ============\n#{ex.inspect}\n========================\n"
         end
       end
 
     end
 
-    # counts a hit to a key
+      # counts a hit to a key
     def inc_hit(key, options)
       if @hits[key]
         @hits[key]+=1
@@ -252,7 +263,7 @@ module GhostReader
       end
     end
 
-    # counts a miss to a key and a locale
+      # counts a miss to a key and a locale
     def inc_miss(locale, key, options)
       if @misses[key]
         key_hash=@misses[key]
@@ -309,6 +320,13 @@ module GhostReader
         locales.concat @store.keys
       end
       locales.uniq
+    end
+    # Simple logs messages to console if enabled
+    def log(message)
+      if @trace
+        #@trace.call "#{Time.now.strftime("%Y-%m-%d %H:%M:%S")}: #{message}"
+        @trace.call message
+      end
     end
 
   end

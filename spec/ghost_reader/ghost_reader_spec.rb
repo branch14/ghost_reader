@@ -20,17 +20,20 @@ describe "Ghost Reader" do
     })
     fallback.store_translations(:de, {:notfound=>'Nicht gefunden'})
     fallback.store_translations(:pt, {:dummy=>''})
-    # Initializes a Handler
+      # Initializes a Handler
     @handler=GhostHandler.new
-    # Start a Mongrel-Server for Testing Ghost Reader
+      # Start a Mongrel-Server for Testing Ghost Reader
     @server = Mongrel::HttpServer.new('0.0.0.0', 35623)
     @server.register('/', @handler)
     @server.run
-    # Short Wait-Time for Testing
+      # Short Wait-Time for Testing
     I18n.backend=GhostReader::Backend.new("http://localhost:35623/",
                                           :default_backend=>fallback,
-                                          :wait_time=>1)
-    # Wait for finishing first call in background
+                                          :wait_time=>1,
+                                          :trace => Proc.new do |message|
+                                            puts message
+                                          end)
+      # Wait for finishing first call in background
     sleep 3
   end
   after(:all) do
