@@ -83,7 +83,12 @@ class GhostHandler<Mongrel::HttpHandler
                                           'format'=>{
                                                   'separator'=>'.'
                                           }
-                                  }
+                                  },
+                                  'hash_and_string' =>{
+                                          'k1'=>'v1',
+                                          'k2'=>'v2'
+                                  },
+                                  'string_and_hash' =>'String value'
                           },
                           'de'=>{
                                   'thanks'=>'Danke %{name}'

@@ -15,25 +15,27 @@ describe "Ghost Reader" do
                                                               'even'=>'Even value'
                                                       }
                                               }
-                                      }
+                                      },
+                                      :hash_and_string => 'String value',
+                                      :string_and_hash => {:k1=>'v1'}
 
     })
     fallback.store_translations(:de, {:notfound=>'Nicht gefunden'})
     fallback.store_translations(:pt, {:dummy=>''})
-      # Initializes a Handler
+    # Initializes a Handler
     @handler=GhostHandler.new
-      # Start a Mongrel-Server for Testing Ghost Reader
+    # Start a Mongrel-Server for Testing Ghost Reader
     @server = Mongrel::HttpServer.new('0.0.0.0', 35623)
     @server.register('/', @handler)
     @server.run
-      # Short Wait-Time for Testing
+    # Short Wait-Time for Testing
     I18n.backend=GhostReader::Backend.new("http://localhost:35623/",
                                           :default_backend=>fallback,
                                           :wait_time=>1,
                                           :trace => Proc.new do |message|
                                             puts message
                                           end)
-      # Wait for finishing first call in background
+    # Wait for finishing first call in background
     sleep 3
   end
   after(:all) do
@@ -448,13 +450,23 @@ describe "Ghost Reader" do
             "date.formats.long"=>{"default"=>{"en"=>"%B %d, %Y"}, "count"=>{}},
             "number.human.decimal_units.units.million"=>{"default"=>{"en"=>"Million"}, "count"=>{}},
             "datetime.distance_in_words.over_x_years.one"=>{"default"=>{"en"=>"over 1 year"}, "count"=>{}},
-            "datetime.distance_in_words.less_than_x_seconds.one"=>{"default"=>{"en"=>"less than 1 second"}, "count"=>{}}
+            "datetime.distance_in_words.less_than_x_seconds.one"=>{"default"=>{"en"=>"less than 1 second"}, "count"=>{}},
+            "hash_and_string"=>{"default"=>{"en"=>"String value"}, "count"=>{}},
+            "string_and_hash.k1"=>{"default"=>{"en"=>"v1"}, "count"=>{}}
     }
   }
-  it('can read availbale locales from default-Backend and from ghost-server') {
+  it('can read available locales from default-Backend and from ghost-server') {
     available_locales = I18n.backend.available_locales
     available_locales.include?(:de).should == true
     available_locales.include?(:pt).should == true
     available_locales.include?(:es).should == true
   }
+
+  it('can handle hash-map with string as fallback value') do
+    I18n.t('hash_and_string').should == {:k1=>'v1', :k2=>'v2'}
+  end
+
+  it('can handle a string value with a hash as fallback value') do
+    I18n.t('string_and_hash').should == "String value"
+  end
 end

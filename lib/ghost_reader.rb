@@ -116,7 +116,7 @@ module GhostReader
       end
       if found_value.is_a? Hash
         default_values = @default_backend.lookup(locale, full_key)
-        if default_values
+        if default_values && default_values.is_a?(Hash)
           found_value=default_values.deep_merge(found_value)
           inc_miss locale.to_s, full_key.to_s, filtered_options
         end
@@ -129,7 +129,6 @@ module GhostReader
     #seconds
     def call_server
       if @bg_thread
-        #log "BG-Thread: #{@bg_thread}"
         # dont start more than one background_thread
         return if @bg_thread.alive?
           # get the values from the last call
