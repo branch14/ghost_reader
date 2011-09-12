@@ -15,15 +15,8 @@ module GhostReader
       @hits={}
       @misses={}
       @last_server_call=0
-        # initiates first call for filling caches in background
-      if defined?(PhusionPassenger)
-        # In Passenger load data in foreground
-        @store=load_yaml_from_ghostwriter
-        log "Data in Passenger-Mode directly loaded"
-      else
-        # Elsewhere load data in Background
-        call_server
-      end
+      # Load data in Background
+      @store=call_server
     end
 
     def load_yaml_from_ghostwriter
