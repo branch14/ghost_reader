@@ -111,9 +111,9 @@ completed translations from the writer.
 {"en":{"sample":{"key_1":"Sample translation 1.","key_2":"Sample translation 2."}}}
 ```
 
-### Addendum
+# Addendum
 
-#### HTTP header date formats are specified here
+## HTTP header date formats are specified here
 
 * http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.3
 * http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.29
