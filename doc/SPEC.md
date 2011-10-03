@@ -28,6 +28,7 @@ completed translations from the writer.
 
 * On application start a request should be made from server to send the
   already completed translations
+  - Use rails caching for case when multiple instances of the application are started
   - This request has to be nonlocking/async, and must not hang or
     crash the server if it fails
   - The server performs caching on this request. (Note: Because of
