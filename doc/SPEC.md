@@ -7,6 +7,7 @@ The ghost/writer communication protocol should define the process for
 efficient exchange of the missing i18n translations from the reader and
 completed translations from the writer.
 
+
 # Specification
 
 ## Prerequisites
@@ -16,7 +17,22 @@ completed translations from the writer.
 * Identification should be performed by use of an API key
 * Authentication/Authorization are not yet addressed
 
+
 ## Use cases
+
+* There are no request specific to a locale. All request will update
+  or return translations for multiple locales.
+
+* I18n keys may occur in two different forms:
+
+  - aggregated (string), e.g.
+  
+    "this.is.a.sample.key"
+  
+  - nested (hash), e.g. (in JSON)
+  
+    {"this":{"is":{"a":{"sample":{"key":null}}}}}
+
 
 ### Application start (initial request)
 
@@ -41,6 +57,7 @@ completed translations from the writer.
 
   - This request will also respond to YAML & CSV for exporting.
 
+
 ### Client reports missing translations (reporting request)
 
 * The client should gather a collection of all missing translations.
@@ -61,7 +78,9 @@ completed translations from the writer.
   
     (2) POST https://ghostwriter/api/<APIKEY>/translations
 
-Open Question: What happens if one or more of the posted keys are invalid?
+* The server will validate the keys and create or update untranslated
+  entries.
+
 
 ### Client recieves updated translations (incremental request)
 
@@ -92,43 +111,53 @@ Open Question: What happens if one or more of the posted keys are invalid?
   
 * The client will track the "Last-Modified" header for future requests.
   
-### Client sends all translated data to server (push request)
 
-* TODO
-* The server should validate the data and update the untranslated entries
+### Error handling
 
-### Client receives error message
+* The client should log the error and retry the request.
 
-* TODO
-* The client should log the error and retry the request
-* After a number of retries the client should notify the administrator
-(through email, sms... etc) that there is a problem
+* After a number of retries the client should inform the administrator
+  (through email, sms... etc.) that there is a problem.
+
 
 ## Data model definition
 
-* TODO
-
 ### Request
 
-* The request data should contain the following
+* The request data should contain the following:
 
   - locale code
-  - the i18n keys which where requested but have no translation
+  - the i18n keys (aggregated) which where requested but have no
+    translation
   - the default values if fallback lookups yielded a result
-  - a count, indictaing how often they were requested (can be used
+  - a count, indicating how often they were requested (can be used
     as a proxy variable for importance)
-  - timestamp when request was made (what for?)
   - timestamp when the last request was made
     (as HTTP header "Last-Modified" -> "If-Modified-Since")
 
-* Sample JSON
+* Sample Request, reporting missing (JSON)
+
+    {"sample.key_1":{"en":{"count":42,"default":"Sample translation 1."}},
+    "sample.key_2":{"en":{"count":23,"default":"Sample translation 2."}}}
+
 
 ### Response
 
 * The response data should contain the following
 
-  - the completed translations only for the requested locale and
-    translation keys in JSON format (only the requested locale?)
-  - timestamp when response was made ("Last-Modifed" HTTP header)
+  - keys (nested) and their translations, nested in locales
+  - timestamp, when response was made ("Last-Modifed" HTTP header)
 
-* Sample JSON
+* Sample Response (JSON)
+
+    {"en":{"sample":{"key_1":"Sample translation 1.",
+    "key_2":"Sample translation 2."}}}
+
+
+### Addendum
+
+#### HTTP header date formats are specified here
+
+* http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.3
+* http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.29
+* e.g. in ruby strftime format '%a, %d %b %Y %H:%M:%S %Z'
