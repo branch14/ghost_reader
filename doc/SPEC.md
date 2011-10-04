@@ -44,7 +44,7 @@ completed translations from the writer.
 * The client should gather a collection of all missing translations.
   - If a translation is missing the lookup will cascade into other
     sources (I18n backends, like YAML files). (Note: This cannot be
-    achivied by chaining backends since fallbacks will not be
+    achieved by chaining backends since fallbacks will not be
     propagated.)
   - If the lookup yields a result the result will reported along with
     the key as a default value.
