@@ -22,6 +22,7 @@ and updates with the ghost_server}
 
   s.add_dependency('i18n')
   s.add_dependency('json')
+  s.add_dependency('excon')
 
   s.add_development_dependency('rack')
   s.add_development_dependency('rake')
