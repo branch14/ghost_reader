@@ -110,7 +110,24 @@ completed translations from the writer.
 
 ```
 {"en":{"sample":{"key_1":"Sample translation 1.","key_2":"Sample translation 2."}}}
+
 ```
+
+## Lookup
+
+The client as a I18n backend will lookup translations in multiple sources.
+
+1. Pool (maybe there is a better name for it)
+  - local
+  - maybe use Rails cache, to share pool over multiple instances
+2. GhostWriter API
+  - Asynchronously!
+  - As long as translations are missing, the client will poll the
+    server for updated translations and merge any newly recieved
+    translations into the local Pool.
+3. Fallback
+  - SimpleBackend (locale files)
+  - or whatever is used by the developers during coding
 
 # Addendum
 
