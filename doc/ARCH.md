@@ -33,6 +33,5 @@ Initializer
       :fallback => I18n.backend,
       :api_key => '91885ca9ec4feb9b2ed2423cdbdeda32'
     }
-    I18n.backend = GhostReader::I18nBackend.new(options)
-
+    I18n.backend = GhostReader::I18nBackend.new(options).start_agents
 

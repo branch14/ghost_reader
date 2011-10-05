@@ -24,6 +24,8 @@ and updates with the ghost_server}
   s.add_dependency('json')
   s.add_dependency('excon')
 
+  s.add_development_dependency('ruby-debug')
+
   s.add_development_dependency('rack')
   s.add_development_dependency('rake')
   s.add_development_dependency('rspec')
