@@ -2,6 +2,8 @@ require 'rubygems'
 require 'excon'
 require 'json'
 
+# Excon.ssl_verify_peer = false
+
 address = 'http://0.0.0.0:3000/api/91885ca9ec4feb9b2ed2423cdbdeda32/translations.json'
 excon = Excon.new(address)
 puts
@@ -17,8 +19,8 @@ puts
 
 puts "(2) Reporting request... (POST)"
 data = {
-  "sample.key_1" => {"en" => {"count" => 42,"default" => "Sample translation 1."}},
-  "sample.key_2" => {"en" => {"count" => 23,"default" => "Sample translation 2."}}
+  "sample.key_1" => {"en" => {"count" => 42, "default" => "Sample translation 1."}},
+  "sample.key_2" => {"en" => {"count" => 23, "default" => "Sample translation 2."}}
 }
 response = excon.post(:body => "data=#{data.to_json}")
 puts
