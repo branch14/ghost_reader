@@ -71,6 +71,8 @@ module GhostReader
       res
     end
 
+    # contact server and exchange data if last call is more than @wait_time
+    # seconds
     def call_server
       if @bg_thread
         # dont start more than one background_thread
