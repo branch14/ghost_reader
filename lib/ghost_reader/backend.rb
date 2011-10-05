@@ -10,12 +10,8 @@ module GhostReader
       #@max_packet_size=opts[:max_packet_size] || 100
       #@trace=opts[:trace]
 
-
       # Initialize the client
       @client = Client.new(url, opts)
-
-      # Load data in Background
-      @store = @client.store
     end
 
     def push_all_backend_data
@@ -101,9 +97,6 @@ module GhostReader
       found_value
     end
 
-    # contact server and exchange data if last call is more than @wait_time
-    #seconds
-
     # counts a hit to a key
     def inc_hit(key, options)
       if @client.hits[key]
@@ -157,18 +150,7 @@ module GhostReader
     end
 
 
-    def collect_hit_values(key, value, count)
-      if value.is_a? Hash
-        ret={}
-        value.each_pair do |entry_key, entry_value|
-          ret.merge!(collect_hit_values("#{key}.#{entry_key}", entry_value,
-                                        count))
-        end
-        return ret
-      else
-        return {key=>count}
-      end
-    end
+
   end
 
   if defined?(Rails)
