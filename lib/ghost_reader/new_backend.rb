@@ -49,7 +49,10 @@ module GhostReader
             sleep config.retrieval_interval
             config.logger.debug "Incremental request."
             response = config.client.incremental_request
-            @memoized_lookup.merge!(response[:data]) if response[:status] == 200
+            if response[:status] == 200
+              flattend = flatten_translations_in_all_locales(response[:data])
+              @memoized_lookup.deep_merge! flattend
+            end
           end
         end
       end
@@ -70,6 +73,13 @@ module GhostReader
         end
       end
 
+      def flatten_translations_in_all_locales(data)
+        data.inject({}) do |result, key_value|
+          key, value = key_value
+          result.merge key => flatten_translations(key, value, true, false)
+        end
+      end
+
       def default_config
         {
           :retrieval_interval => 15,
@@ -84,5 +94,6 @@ module GhostReader
     include I18n::Backend::Base
     include Implementation
     include I18n::Backend::Memoize # provides @memoized_lookup
+    include I18n::Backend::Flatten # provides #flatten_translations
   end
 end
