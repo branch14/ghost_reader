@@ -15,6 +15,7 @@ module GhostReader
         self.config = OpenStruct.new(default_config.merge(conf))
         yield(config) if block_given?
         config.logger = Logger.new(config.logfile || STDOUT)
+        config.service = {}
         config.service[:logger] ||= config.logger
         config.client = Client.new(config.service)
       end
