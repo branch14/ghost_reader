@@ -7,6 +7,13 @@ module GhostReader
       Excon.mock = true
     end
 
+    describe "#initialization" do
+      it "should raise exception for missing api key" do
+        bad_config = { :api_key => nil }
+        Client.new(bad_config).should raise_error
+      end
+    end
+
     describe "#initial_request" do
       before(:each) do
         #TODO: replace this with real life example
