@@ -25,7 +25,7 @@ module GhostReader
 
     # returns true if redirected, false otherwise
     def reporting_request(data)
-      service.post(:body => "data=#{data.to_json}")
+      { :status => service.post(:body => "data=#{data.to_json}").status }
     end
 
     # returns a Head with three keys
@@ -36,8 +36,9 @@ module GhostReader
       headers = { 'If-Modified-Since' => self.last_modified }
       response = service.get(:headers => headers)
       self.last_modified = response.get_header('Last-Modified')
-      { :status => response.status,
-        :data => JSON.parse(response.body) }
+      { :status => response.status }.tap do |result|
+        result[:data] = JSON.parse(response.body) if response.status == 200
+      end
     end
 
     private
