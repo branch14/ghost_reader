@@ -4,20 +4,60 @@ require 'json'
 module GhostReader
   class Client
 
-    def initialize(config)
-      @uri = config[:uri]
+    attr_accessor :config, :last_modified
+
+    def initialize(conf)
+      self.config = OpenStruct.new(default_config.merge(conf || {}))
     end
 
+    # returns a Head with three keys
+    #   :timestamp (the value of last-modified header)
+    #   :data (a nested Hash of translations)
+    #   :status (the reponse status)
     def initial_request
-      build_response(Excon.get(@uri))
+      response = service.get
+      self.last_modified = response.get_header('Last-Modified')
+      build_head(response)
+    end
+
+    # returns true if redirected, false otherwise
+    def reporting_request(data)
+      service.post(:body => "data=#{data.to_json}")
+    end
+
+    # returns a Head with three keys
+    #   :timestamp (the value of last-modified header)
+    #   :data (a nested Hash of translations)
+    #   :status (the reponse status)
+    def incremental_request
+      headers = { 'If-Modified-Since' => self.last_modified }
+      response = service.get(:headers => headers)
+      self.last_modified = response.get_header('Last-Modified')
+      build_head(response)
     end
 
     private
 
-    def build_response(excon_response)
+    def build_head(excon_response)
       { :status => excon_response.status,
-        :data => excon_response.body,
-        :timestamp => excon_response.headers["last-modified"] }
+        :data => JSON.parse(excon_response.body),
+        :timestamp => self.last_modified }
+    end
+
+    def service
+      @service ||= Excon.new(address)
+    end
+
+    def address
+      raise 'no api_key provided' if config.api_key.nil?
+      @address ||= config.uri.sub(':api_key', config.api_key)
+    end
+
+    def default_config
+      {
+        :uri => 'http://ghost.panter.ch/api/:api_key/translations.json',
+        :api_key => nil
+      }
     end
 
 #    attr_accessor :hits, :misses, :store
