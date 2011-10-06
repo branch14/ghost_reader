@@ -1,2 +1,4 @@
-%w(backend client version).each { |f| require File.join('ghost_reader', f) }
+%w(backend client).each do |f|
+  require File.expand_path(File.join(%w(.. ghost_reader), f), __FILE__)
+end
 

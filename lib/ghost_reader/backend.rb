@@ -18,11 +18,14 @@ module GhostReader
         config.logger = Logger.new(config.logfile || STDOUT)
         config.service[:logger] ||= config.logger
         config.client = Client.new(config.service)
+        config.logger.debug "Initialized backend."
       end
 
-      def start_agents
+      def spawn_agents
+        config.logger.debug "Spawning agents."
         spawn_retriever
         spawn_reporter
+        config.logger.debug "Spawned its agents."
         self
       end
 
@@ -44,9 +47,13 @@ module GhostReader
 
       # performs initial and incremental requests
       def spawn_retriever
+        config.logger.debug "Spawning retriever."
         Thread.new do
-          @memoized_lookup = config.client.initial_request[:data]
+          config.logger.debug "Performing initial request."
+          result = config.client.initial_request
+          @memoized_lookup = flatten_translations_for_all_locales(result[:data])
           self.missings = {} # initialized
+          config.logger.debug "Initial request successfull."
           until false
             sleep config.retrieval_interval
             response = config.client.incremental_request
@@ -63,6 +70,7 @@ module GhostReader
 
       # performs reporting requests
       def spawn_reporter
+        config.logger.debug "Spawning reporter."
         Thread.new do
           until false
             sleep config.report_interval
