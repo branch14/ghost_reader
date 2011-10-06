@@ -1,10 +1,10 @@
 require 'spec_helper'
 
-describe GhostReader::NewBackend do
+describe GhostReader::Backend do
 
   context 'on class level' do
     it 'should nicely initialize' do
-      backend = GhostReader::NewBackend.new
+      backend = GhostReader::Backend.new
     end
   end
 
@@ -14,7 +14,7 @@ describe GhostReader::NewBackend do
       @translation = 'This is a test.'
       @fallback = mock "FallbackBackend"
       @fallback.stub!(:translate).and_return(@translation)
-      @backend = GhostReader::NewBackend.new(:fallback => @fallback)
+      @backend = GhostReader::Backend.new(:fallback => @fallback)
     end
     
     it 'should use the given fallback' do

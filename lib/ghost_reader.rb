@@ -1,7 +1,2 @@
-require 'i18n'
-require 'net/http'
-require 'json'
+%w(backend client version).each { |f| require File.join('ghost_reader', f) }
 
-require 'ghost_reader/client'
-require 'ghost_reader/backend'
-require 'ghost_reader/new_backend'
