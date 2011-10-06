@@ -16,7 +16,7 @@ module GhostReader
         yield(config) if block_given?
         config.logger = Logger.new(config.logfile || STDOUT)
         config.service[:logger] ||= config.logger
-        config.client = NewClient.new(config.service)
+        config.client = Client.new(config.service)
       end
 
       def start_agents
