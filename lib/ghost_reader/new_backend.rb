@@ -2,7 +2,7 @@ require 'logger'
 require 'ostruct'
 require 'i18n/backend/base'
 require 'i18n/backend/memoize'
-require 'ghost_reader/new_client'
+require 'ghost_reader/client'
 
 module GhostReader
   class NewBackend
@@ -15,7 +15,7 @@ module GhostReader
         self.config = OpenStruct.new(default_config.merge(conf))
         yield(config) if block_given?
         config.logger = Logger.new(config.logfile || STDOUT)
-        config.client = NewClient.new(config.service)
+        config.client = Client.new(config.service)
       end
 
       def start_agents

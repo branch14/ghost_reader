@@ -6,8 +6,9 @@ module GhostReader
 
     attr_accessor :config, :last_modified
 
-    def initialize(conf)
+    def initialize(conf=nil)
       self.config = OpenStruct.new(default_config.merge(conf || {}))
+      config.logger = Logger.new(config.logfile || STDOUT)
     end
 
     # returns a Head with three keys
@@ -22,7 +23,9 @@ module GhostReader
 
     # returns true if redirected, false otherwise
     def reporting_request(data)
-      service.post(:body => "data=#{data.to_json}")
+      response = service.post(:body => "data=#{data.to_json}")
+      config.logger.error "Reporting request not redirected" unless response.status == 302
+      { :status => response.status }
     end
 
     # returns a Head with three keys
@@ -39,9 +42,10 @@ module GhostReader
     private
 
     def build_head(excon_response)
-      { :status => excon_response.status,
-        :data => JSON.parse(excon_response.body),
-        :timestamp => self.last_modified }
+      { :status => excon_response.status }.tap do |result|
+        result[:data] = JSON.parse(excon_response.body) if excon_response.status == 200
+        result[:timestamp] = self.last_modified
+      end
     end
 
     def service

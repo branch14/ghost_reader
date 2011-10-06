@@ -1,68 +1,85 @@
 require 'spec_helper'
 
-module GhostReader
-  describe Client do
+Excon.mock = true
 
-    before(:each) do
-      Excon.mock = true
-    end
-
-    describe "#initialization" do
-      it "should raise exception for missing api key" do
-        bad_config = { :api_key => nil }
-        Client.new(bad_config).should raise_error
-      end
-    end
-
-    describe "#initial_request" do
-      before(:each) do
-        #TODO: replace this with real life example
-        Excon.stub({:method => :get}, { :body => { "test" => "hello"  }.to_json,
-                                        :status => 200,
-                                        :headers => { "last-modified" => "Tue, 15 Sep 2011 14:25:38 GMT" }})
-        @client = Client.new(test_config)
-      end
-
-      context "successful" do
-        it "should return the status 200" do
-          @client.initial_request[:status].should == 200
-        end
-
-        it "should return the JSON data" do
-          @client.initial_request[:data].should == { 'test' => 'hello' }
-        end
-
-        it "should return the timestamp" do
-          @client.initial_request[:timestamp].should == "Tue, 15 Sep 2011 14:25:38 GMT"
-        end
-      end
-    end
-
-    describe "#reporting_request" do
-
-    end
-
-    describe "#incremental_request" do
-      before(:each) do
-        #TODO: replace this with real life example
-        Excon.stub({:method => :get}, { :body => { "test" => "hello"  }.to_json,
-                                        :status => 200,
-                                        :headers => { "last-modified" => "Tue, 15 Sep 2011 14:25:38 GMT" }})
-        @client = Client.new(test_config)
-      end
-    end
-
+module Excon
+  def self.kill_stubs!
+    @stubs = nil
   end
 end
 
-# Config data for the client initialization
-def test_config
-  {
-    :retrieval_interval => 15,
-    :report_interval => 10,
-    :fallback => nil,
-    :api_key => '12345',
-    :logfile => nil
-  }
+describe GhostReader::Client do
+
+  context 'on class level' do
+    it 'should nicely initialize' do
+      GhostReader::Client.new.should be_an_instance_of(GhostReader::Client)
+    end
+  end
+
+  context 'a initialized client' do
+
+    let(:client) { GhostReader::Client.new(:api_key => 'some+api_key') }
+
+    before(:each) { Excon.kill_stubs! }
+
+    it 'should nicely respond to initial_request' do
+      body = {'some json' => 'here'}
+      Excon.stub( { :method => :get },
+                  { :body => body.to_json,
+                    :status => 200,
+                    :headers => { "last-modified" => httpdate } } )
+      response = client.initial_request
+      response[:status].should eq(200)
+      response[:data].should eq(body)
+    end
+
+    it 'should nicely respond to reporting_request' do
+      some_data = { 'some' => 'data' }
+      Excon.stub( { :method => :post },
+                  { :body => nil,
+                    :status => 302 } )
+      response = client.reporting_request(some_data)
+      response[:status].should eq(302)
+    end
+
+    it 'should log error if reporting_request response is not a redirect' do
+      some_data = { 'some' => 'data' }
+      Excon.stub( { :method => :post },
+                  { :body => nil,
+                    :status => 200 })
+
+      client.config.logger.should_receive(:error)
+
+      response = client.reporting_request(some_data)
+      response[:status].should eq(200)
+    end
+
+    it 'should nicely respond to incremental_request with 200' do
+      body = {'some json' => 'here'}
+      Excon.stub( { :method => :get },
+                  { :body => body.to_json,
+                    :status => 200,
+                    :headers => { "last-modified" => httpdate } } )
+      response = client.incremental_request
+      response[:status].should eq(200)
+      response[:data].should eq(body)
+    end
+
+    it 'should nicely respond to incremental_request with 304' do
+      Excon.stub( { :method => :get },
+                  { :body => nil,
+                    :status => 304,
+                    :headers => { "last-modified" => httpdate } } )
+      response = client.incremental_request
+      response[:status].should eq(304)
+      response[:data].should be_nil
+    end
+
+  end
+
+  def httpdate(time=Time.now)
+    time.strftime('%a, %d %b %Y %H:%M:%S %Z')
+  end
+
 end
 
