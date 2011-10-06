@@ -15,7 +15,8 @@ module GhostReader
         self.config = OpenStruct.new(default_config.merge(conf))
         yield(config) if block_given?
         config.logger = Logger.new(config.logfile || STDOUT)
-        config.client = Client.new(config.service)
+        config.service[:logger] ||= config.logger
+        config.client = NewClient.new(config.service)
       end
 
       def start_agents
@@ -47,9 +48,14 @@ module GhostReader
           self.missings = {} # initialized
           until false
             sleep config.retrieval_interval
-            config.logger.debug "Incremental request."
             response = config.client.incremental_request
-            @memoized_lookup.merge!(response[:data]) if response[:status] == 200
+            if response[:status] == 200
+              config.logger.debug "Incremental request with data."
+              flattend = flatten_translations_for_all_locales(response[:data])
+              @memoized_lookup.deep_merge! flattend
+            else
+              config.logger.debug "Incremental request, but no data."
+            end
           end
         end
       end
@@ -70,6 +76,14 @@ module GhostReader
         end
       end
 
+      # a wrapper for I18n::Backend::Flatten#flatten_translations
+      def flatten_translations_for_all_locales(data)
+        data.inject({}) do |result, key_value|
+          key, value = key_value
+          result.merge key => flatten_translations(key, value, true, false)
+        end
+      end
+
       def default_config
         {
           :retrieval_interval => 15,
@@ -84,5 +98,6 @@ module GhostReader
     include I18n::Backend::Base
     include Implementation
     include I18n::Backend::Memoize # provides @memoized_lookup
+    include I18n::Backend::Flatten # provides #flatten_translations
   end
 end
