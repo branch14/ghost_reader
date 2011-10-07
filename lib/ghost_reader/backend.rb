@@ -25,6 +25,7 @@ module GhostReader
         self.config = OpenStruct.new(default_config.merge(conf))
         yield(config) if block_given?
         config.logger = Logger.new(config.logfile || STDOUT)
+        config.logger.level = config.log_level || Logger::WARN
         config.service[:logger] ||= config.logger
         config.client = Client.new(config.service)
         config.logger.debug "Initialized backend."
@@ -121,6 +122,7 @@ module GhostReader
           :report_interval => 10,
           :fallback => nil, # a I18n::Backend (mandatory)
           :logfile => nil, # a path
+          :log_level => nil, # Log level, the options are Config::(FATAL, ERROR, WARN, INFO and DEBUG)           (http://www.ruby-doc.org/stdlib/libdoc/logger/rdoc/Logger.html)
           :service => {} # nested hash, see GhostReader::Client#default_config
         }
       end
