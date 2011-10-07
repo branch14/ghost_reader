@@ -72,13 +72,18 @@ module GhostReader
             self.missings = {} # initialized
             config.logger.info "Initial request successfull."
             until false
-              sleep config.retrieval_interval
-              response = config.client.incremental_request
-              if response[:status] == 200
-                config.logger.info "Incremental request with data."
-                memoize_merge! response[:data], :method => :deep_merge!
-              else
-                config.logger.debug "Incremental request, but no data."
+              begin
+                sleep config.retrieval_interval
+                response = config.client.incremental_request
+                if response[:status] == 200
+                  config.logger.info "Incremental request with data."
+                  config.logger.debug "Data: #{response[:data].inspect}"
+                  memoize_merge! response[:data], :method => :deep_merge!
+                else
+                  config.logger.debug "Incremental request, but no data."
+                end
+              rescue
+                config.logger.error "Exception in retriever loop: #{ex}"
               end
             end
           rescue => ex
@@ -91,8 +96,8 @@ module GhostReader
       def spawn_reporter
         config.logger.debug "Spawning reporter."
         Thread.new do
-          begin
-            until false
+          until false
+            begin
               sleep config.report_interval
               unless self.missings.nil?
                 unless self.missings.empty?
@@ -105,13 +110,13 @@ module GhostReader
               else
                 config.logger.debug "Reporting request omitted, not yet initialized, waiting for intial request."
               end
+              config.logger.error "Reporter finished."
+            rescue => ex
+              config.logger.error "Exception in reporter thread: #{ex}"
+              config.logger.error e.backtrace
+              puts e.backtrace
+              config.logger.error '-'*60
             end
-            config.logger.error "Reporter finished."
-          rescue => ex
-            config.logger.error "Exception in reporter thread: #{ex}"
-            config.logger.error e.backtrace
-            puts e.backtrace
-            config.logger.error '-'*60
           end
         end
       end

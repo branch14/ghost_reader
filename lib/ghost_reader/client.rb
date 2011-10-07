@@ -35,8 +35,14 @@ module GhostReader
     def incremental_request
       headers = { 'If-Modified-Since' => self.last_modified }
       response = connect_with_retry(:get, :headers => headers)
-      self.last_modified = response.get_header('Last-Modified')
+      self.last_modified = response.get_header('Last-Modified') if response.status == 200
       build_head(response)
+    end
+
+    # this is just a wrapper to have a log message when the field is set
+    def last_modified=(value)
+      config.logger.debug "Last-Modified: #{value}"
+      @last_modified = value
     end
 
     private
