@@ -65,11 +65,7 @@ module GhostReader
     def connect_with_retry(method = :get, params = {})
       retries = self.config.connection_retries
       while (retries > 0) do
-        if method == :post
-          response = service.post(params)
-        elsif method == :get
-          response = service.get(params)
-        end
+        response = service.send(method, params)
 
         if response.status == 408
           config.logger.error "Connection time-out. Retrying... #{retries}"
