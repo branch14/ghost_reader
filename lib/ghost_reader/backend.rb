@@ -89,12 +89,16 @@ module GhostReader
           begin
             until false
               sleep config.report_interval
-              unless self.missings.empty?
-                config.logger.debug "Reporting request with #{self.missings.keys.size} missings."
-                config.client.reporting_request(missings)
-                missings.clear
+              unless self.missings.nil?
+                unless self.missings.empty?
+                  config.logger.debug "Reporting request with #{self.missings.keys.size} missings."
+                  config.client.reporting_request(missings)
+                  missings.clear
+                else
+                  config.logger.debug "Reporting request omitted, nothing to report."
+                end
               else
-                config.logger.debug "Reporting request omitted, nothing to report."
+                config.logger.debug "Reporting request omitted, not yet initialized, waiting for intial request."
               end
             end
           rescue => ex
