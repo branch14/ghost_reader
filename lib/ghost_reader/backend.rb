@@ -106,8 +106,12 @@ module GhostReader
                 config.logger.debug "Reporting request omitted, not yet initialized, waiting for intial request."
               end
             end
+            config.logger.error "Reporter finished."
           rescue => ex
             config.logger.error "Exception in reporter thread: #{ex}"
+            config.logger.error e.backtrace
+            puts e.backtrace
+            config.logger.error '-'*60
           end
         end
       end
