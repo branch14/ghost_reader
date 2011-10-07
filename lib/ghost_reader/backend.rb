@@ -55,6 +55,12 @@ module GhostReader
         self.missings.deep_merge!(missings)
       end
 
+      def memoize_merge!(data, options={ :method => :merge! })
+        flattend = flatten_translations_for_all_locales(data)
+        # TODO sympolize keys of flattend
+        memoized_lookup.send(options[:method], flattend)
+      end
+
       # performs initial and incremental requests
       def spawn_retriever
         config.logger.debug "Spawning retriever."
@@ -62,8 +68,7 @@ module GhostReader
           begin
             config.logger.debug "Performing initial request."
             response = config.client.initial_request
-            flattend = flatten_translations_for_all_locales(response[:data])
-            memoized_lookup.merge! flattend
+            memoize_merge! response[:data]
             self.missings = {} # initialized
             config.logger.debug "Initial request successfull."
             until false
@@ -71,8 +76,7 @@ module GhostReader
               response = config.client.incremental_request
               if response[:status] == 200
                 config.logger.debug "Incremental request with data."
-                flattend = flatten_translations_for_all_locales(response[:data])
-                memoized_lookup.deep_merge! flattend
+                memoize_merge! response[:data], :method => :deep_merge!
               else
                 config.logger.debug "Incremental request, but no data."
               end
