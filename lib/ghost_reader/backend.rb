@@ -58,22 +58,26 @@ module GhostReader
       def spawn_retriever
         config.logger.debug "Spawning retriever."
         Thread.new do
-          config.logger.debug "Performing initial request."
-          result = config.client.initial_request
-          flatten_translations_for_all_locales(result[:data])
-          memoized_lookup.merge! flattend
-          self.missings = {} # initialized
-          config.logger.debug "Initial request successfull."
-          until false
-            sleep config.retrieval_interval
-            response = config.client.incremental_request
-            if response[:status] == 200
-              config.logger.debug "Incremental request with data."
-              flattend = flatten_translations_for_all_locales(response[:data])
-              memoized_lookup.deep_merge! flattend
-            else
-              config.logger.debug "Incremental request, but no data."
+          begin
+            config.logger.debug "Performing initial request."
+            response = config.client.initial_request
+            flattend = flatten_translations_for_all_locales(response[:data])
+            memoized_lookup.merge! flattend
+            self.missings = {} # initialized
+            config.logger.debug "Initial request successfull."
+            until false
+              sleep config.retrieval_interval
+              response = config.client.incremental_request
+              if response[:status] == 200
+                config.logger.debug "Incremental request with data."
+                flattend = flatten_translations_for_all_locales(response[:data])
+                memoized_lookup.deep_merge! flattend
+              else
+                config.logger.debug "Incremental request, but no data."
+              end
             end
+          rescue => ex
+            config.logger.fatal "Exception in retriever thread: #{ex}"
           end
         end
       end
@@ -82,15 +86,19 @@ module GhostReader
       def spawn_reporter
         config.logger.debug "Spawning reporter."
         Thread.new do
-          until false
-            sleep config.report_interval
-            unless self.missings.empty?
-              config.logger.debug "Reporting request with #{self.missings.keys.size} missings."
-              config.client.reporting_request(missings)
-              missings.clear
-            else
-              config.logger.debug "Reporting request omitted, nothing to report."
+          begin
+            until false
+              sleep config.report_interval
+              unless self.missings.empty?
+                config.logger.debug "Reporting request with #{self.missings.keys.size} missings."
+                config.client.reporting_request(missings)
+                missings.clear
+              else
+                config.logger.debug "Reporting request omitted, nothing to report."
+              end
             end
+          rescue => ex
+            config.logger.fatal "Exception in reporter thread: #{ex}"
           end
         end
       end
