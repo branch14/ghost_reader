@@ -50,7 +50,7 @@ namespace :ghost_reader do
   desc "Install default initializer for ghost reader"
   task :install => :environment do
 
-    # TODO: this should only when the ghost_reader is introduced as gem
+    # TODO: this should work only when the ghost_reader is introduced as gem
     infile = 'templates/ghost_reader.rb'
     outdir = Rails.root.join("config", "initializers")
 
