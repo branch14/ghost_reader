@@ -44,8 +44,8 @@ module GhostReader
       def lookup(locale, key, scope = [], options = {})
         raise 'no fallback given' if config.fallback.nil?
         config.fallback.translate(locale, key, options).tap do |result|
-          raise 'result is a hash' if result.is_a?(Hash) # TODO
-          track({ key => { locale => { 'default' => result } } })
+          # TODO results which are hashes need to be tracked disaggregated
+          track({ key => { locale => { 'default' => result } } }) unless result.is_a?(Hash)
         end
       end
 
