@@ -34,5 +34,12 @@ describe GhostReader::Backend do
       2.times { @backend.translate(:en, 'this.is.a.test').should eq(@translation) }
     end
 
+    it 'should symbolize keys' do
+      test_data = { "one" => "1", "two" => "2"}
+      result = @backend.send(:symbolize_keys, test_data)
+
+      result.has_key?(:one).should be_true
+    end
+
   end
 end

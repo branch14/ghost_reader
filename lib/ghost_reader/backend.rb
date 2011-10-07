@@ -57,13 +57,8 @@ module GhostReader
 
       def memoize_merge!(data, options={ :method => :merge! })
         flattend = flatten_translations_for_all_locales(data)
-        # TODO sympolize keys of flattend
-        flattend.each.inject({}) do |symbolized, item|
-          key, value = item
-          symbolized_key = key.to_symbol
-          symbolized.merge(symbolized_key, value)
-        end
-        memoized_lookup.send(options[:method], flattend)
+        symbolized_flattend = symbolize_keys(flattend)
+        memoized_lookup.send(options[:method], symbolized_flattend)
       end
 
       # performs initial and incremental requests
@@ -122,6 +117,13 @@ module GhostReader
         data.inject({}) do |result, key_value|
           key, value = key_value
           result.merge key => flatten_translations(key, value, true, false)
+        end
+      end
+
+      def symbolize_keys(hash)
+        hash.each.inject({}) do |symbolized_hash, key_value|
+          key, value = key_value
+          symbolized_hash.merge!({key.to_sym, value})
         end
       end
 
