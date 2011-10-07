@@ -28,14 +28,14 @@ module GhostReader
         config.logger.level = config.log_level || Logger::WARN
         config.service[:logger] ||= config.logger
         config.client = Client.new(config.service)
-        config.logger.debug "Initialized backend."
+        config.logger.info "Initialized GhostReader backend."
       end
 
       def spawn_agents
-        config.logger.debug "Spawning agents."
+        config.logger.debug "GhostReader spawning agents."
         spawn_retriever
         spawn_reporter
-        config.logger.debug "Spawned its agents."
+        config.logger.debug "GhostReader spawned its agents."
         self
       end
 
@@ -70,19 +70,19 @@ module GhostReader
             response = config.client.initial_request
             memoize_merge! response[:data]
             self.missings = {} # initialized
-            config.logger.debug "Initial request successfull."
+            config.logger.info "Initial request successfull."
             until false
               sleep config.retrieval_interval
               response = config.client.incremental_request
               if response[:status] == 200
-                config.logger.debug "Incremental request with data."
+                config.logger.info "Incremental request with data."
                 memoize_merge! response[:data], :method => :deep_merge!
               else
                 config.logger.debug "Incremental request, but no data."
               end
             end
           rescue => ex
-            config.logger.fatal "Exception in retriever thread: #{ex}"
+            config.logger.error "Exception in retriever thread: #{ex}"
           end
         end
       end
@@ -96,7 +96,7 @@ module GhostReader
               sleep config.report_interval
               unless self.missings.nil?
                 unless self.missings.empty?
-                  config.logger.debug "Reporting request with #{self.missings.keys.size} missings."
+                  config.logger.info "Reporting request with #{self.missings.keys.size} missings."
                   config.client.reporting_request(missings)
                   missings.clear
                 else
@@ -107,7 +107,7 @@ module GhostReader
               end
             end
           rescue => ex
-            config.logger.fatal "Exception in reporter thread: #{ex}"
+            config.logger.error "Exception in reporter thread: #{ex}"
           end
         end
       end

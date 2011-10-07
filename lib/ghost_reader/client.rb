@@ -9,7 +9,6 @@ module GhostReader
     def initialize(conf=nil)
       self.config = OpenStruct.new(default_config.merge(conf || {}))
       config.logger ||= Logger.new(config.logfile || STDOUT)
-      config.logger.debug "Initialized client."
     end
 
     # returns a Head with three keys
@@ -17,9 +16,7 @@ module GhostReader
     #   :data (a nested Hash of translations)
     #   :status (the reponse status)
     def initial_request
-      config.logger.debug "Client peforming initial request."
       response = connect_with_retry
-      config.logger.debug "Client returned from inital request."
       self.last_modified = response.get_header('Last-Modified')
       build_head(response)
     end
