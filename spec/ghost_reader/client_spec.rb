@@ -33,6 +33,18 @@ describe GhostReader::Client do
       response[:data].should eq(body)
     end
 
+    it 'should try to reconnect configured number of times if there is timeout' do
+      body = { 'some json' => 'here' }
+      Excon.stub( { :method => :get },
+                  { :body => body.to_json,
+                    :status => 408,
+                    :headers => { "last-modified" => httpdate } } )
+
+      client.config.logger.should_receive(:error).exactly(3).times
+
+      response = client.initial_request
+    end
+
     it 'should nicely respond to reporting_request' do
       some_data = { 'some' => 'data' }
       Excon.stub( { :method => :post },

@@ -18,7 +18,7 @@ module GhostReader
     #   :status (the reponse status)
     def initial_request
       config.logger.debug "Client peforming initial request."
-      response = service.get
+      response = connect_with_retry
       config.logger.debug "Client returned from inital request."
       self.last_modified = response.get_header('Last-Modified')
       build_head(response)
@@ -26,7 +26,7 @@ module GhostReader
 
     # returns true if redirected, false otherwise
     def reporting_request(data)
-      response = service.post(:body => "data=#{data.to_json}")
+      response = connect_with_retry(:post, :body => "data=#{data.to_json}")
       config.logger.error "Reporting request not redirected" unless response.status == 302
       { :status => response.status }
     end
@@ -37,7 +37,7 @@ module GhostReader
     #   :status (the reponse status)
     def incremental_request
       headers = { 'If-Modified-Since' => self.last_modified }
-      response = service.get(:headers => headers)
+      response = connect_with_retry(:get, :headers => headers)
       self.last_modified = response.get_header('Last-Modified')
       build_head(response)
     end
@@ -59,12 +59,34 @@ module GhostReader
       @address ||= config.uri.sub(':api_key', config.api_key)
     end
 
+    # Wrapper method for retrying the connection
+    #   :method - http method (post and get supported at the moment)
+    #   :params - parameters sent to the service (excon)
+    def connect_with_retry(method = :get, params = {})
+      retries = self.config.connection_retries
+      while (retries > 0) do
+        if method == :post
+          response = service.post(params)
+        elsif method == :get
+          response = service.get(params)
+        end
+
+        if response.status == 408
+          config.logger.error "Connection time-out. Retrying... #{retries}"
+          retries -= 1
+        else
+          retries = 0 # There is no timeout, no need to retry
+        end
+      end
+      response
+    end
+
     def default_config
       {
         :uri => 'http://ghost.panter.ch/api/:api_key/translations.json',
-        :api_key => nil
+        :api_key => nil,
+        :connection_retries => 3
       }
     end
-
   end
 end
