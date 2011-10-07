@@ -9,14 +9,14 @@ describe GhostReader::Backend do
   end
 
   context 'Backend set up with fallback' do
-    
+
     before(:each) do
       @translation = 'This is a test.'
       @fallback = mock "FallbackBackend"
       @fallback.stub!(:translate).and_return(@translation)
       @backend = GhostReader::Backend.new(:fallback => @fallback)
     end
-    
+
     it 'should use the given fallback' do
       @backend.config.fallback.should be(@fallback)
       @fallback.should_receive(:translate)

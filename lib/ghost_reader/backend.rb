@@ -58,6 +58,11 @@ module GhostReader
       def memoize_merge!(data, options={ :method => :merge! })
         flattend = flatten_translations_for_all_locales(data)
         # TODO sympolize keys of flattend
+        flattend.each.inject({}) do |symbolized, item|
+          key, value = item
+          symbolized_key = key.to_symbol
+          symbolized.merge(symbolized_key, value)
+        end
         memoized_lookup.send(options[:method], flattend)
       end
 
