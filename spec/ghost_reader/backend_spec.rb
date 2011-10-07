@@ -9,14 +9,14 @@ describe GhostReader::Backend do
   end
 
   context 'Backend set up with fallback' do
-    
+
     before(:each) do
       @translation = 'This is a test.'
       @fallback = mock "FallbackBackend"
       @fallback.stub!(:translate).and_return(@translation)
       @backend = GhostReader::Backend.new(:fallback => @fallback)
     end
-    
+
     it 'should use the given fallback' do
       @backend.config.fallback.should be(@fallback)
       @fallback.should_receive(:translate)
@@ -32,6 +32,13 @@ describe GhostReader::Backend do
     it 'should use memoization' do
       @fallback.should_receive(:translate).exactly(1)
       2.times { @backend.translate(:en, 'this.is.a.test').should eq(@translation) }
+    end
+
+    it 'should symbolize keys' do
+      test_data = { "one" => "1", "two" => "2"}
+      result = @backend.send(:symbolize_keys, test_data)
+
+      result.has_key?(:one).should be_true
     end
 
   end
