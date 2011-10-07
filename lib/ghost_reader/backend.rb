@@ -7,6 +7,15 @@ require 'i18n/backend/flatten'
 
 module GhostReader
   class Backend
+
+    module DebugLookup
+      def lookup(*args)
+        config.logger.debug "Lookup: #{args.inspect}"
+        # debugger
+        super
+      end
+    end
+
     module Implementation
 
       attr_accessor :config, :missings
@@ -51,7 +60,8 @@ module GhostReader
         Thread.new do
           config.logger.debug "Performing initial request."
           result = config.client.initial_request
-          @memoized_lookup = flatten_translations_for_all_locales(result[:data])
+          flatten_translations_for_all_locales(result[:data])
+          memoized_lookup.merge! flattend
           self.missings = {} # initialized
           config.logger.debug "Initial request successfull."
           until false
@@ -60,7 +70,7 @@ module GhostReader
             if response[:status] == 200
               config.logger.debug "Incremental request with data."
               flattend = flatten_translations_for_all_locales(response[:data])
-              @memoized_lookup.deep_merge! flattend
+              memoized_lookup.deep_merge! flattend
             else
               config.logger.debug "Incremental request, but no data."
             end
@@ -108,5 +118,7 @@ module GhostReader
     include Implementation
     include I18n::Backend::Memoize # provides @memoized_lookup
     include I18n::Backend::Flatten # provides #flatten_translations
+    include DebugLookup
   end
 end
+
