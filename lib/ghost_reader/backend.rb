@@ -28,15 +28,13 @@ module GhostReader
         config.logger.level = config.log_level || Logger::WARN
         config.service[:logger] ||= config.logger
         config.client = Client.new(config.service)
+        unless config.no_auto_spawn
+          config.logger.debug "GhostReader spawning agents."
+          spawn_retriever
+          spawn_reporter
+          config.logger.debug "GhostReader spawned its agents."
+        end
         config.logger.info "Initialized GhostReader backend."
-      end
-
-      def spawn_agents
-        config.logger.debug "GhostReader spawning agents."
-        spawn_retriever
-        spawn_reporter
-        config.logger.debug "GhostReader spawned its agents."
-        self
       end
 
       protected
@@ -82,7 +80,7 @@ module GhostReader
                 else
                   config.logger.debug "Incremental request, but no data."
                 end
-              rescue
+              rescue => ex
                 config.logger.error "Exception in retriever loop: #{ex}"
               end
             end

@@ -11,4 +11,4 @@ config = {
   }
 }
 
-I18n.backend = GhostReader::Backend.new(config).spawn_agents
+I18n.backend = GhostReader::Backend.new(config)
