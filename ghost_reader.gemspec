@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 $:.push File.expand_path("../lib", __FILE__)
 require "ghost_reader/version"
 
@@ -25,6 +24,8 @@ and updates with the ghost_server}
   s.add_dependency('excon')
 
   s.add_development_dependency('ruby-debug')
+  s.add_development_dependency('guard')
+  s.add_development_dependency('guard-rspec')
 
   s.add_development_dependency('rack')
   s.add_development_dependency('rake')
