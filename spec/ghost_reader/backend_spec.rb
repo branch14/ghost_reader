@@ -37,8 +37,39 @@ describe GhostReader::Backend do
     it 'should symbolize keys' do
       test_data = { "one" => "1", "two" => "2"}
       result = @backend.send(:symbolize_keys, test_data)
-
       result.has_key?(:one).should be_true
+    end
+
+    context 'nicely merge data into memoized_hash' do
+
+      it 'should work with valid data' do
+        data = {'en' => {'this' => {'is' => {'a' => {'test' => 'This is a test.'}}}}}
+        @backend.send(:memoize_merge!, data)
+        @backend.send(:memoized_lookup).should have_key(:en)
+        # flattend and symbolized
+        @backend.send(:memoized_lookup)[:en].should have_key(:'this.is.a.test')
+      end
+
+      it 'should handle weird data gracefully' do
+        expect do
+          data = {'en' => {'value_is_an_hash' => {'1st' => 'bla', '2nd' => 'blub'}}}
+          @backend.send(:memoize_merge!, data)
+          data = {'en' => {'empty_value' => ''}}
+          @backend.send(:memoize_merge!, data)
+          data = {'en' => {'' => 'Empty key.'}} 
+          @backend.send(:memoize_merge!, data) # 'interning empty string'
+          data = {'en' => {'value_is_an_array' => %w(what the fuck)}}
+          @backend.send(:memoize_merge!, data)
+        end.to_not raise_error
+      end
+      
+      # key should not be empty but if it is...
+      it 'should not raise error when key is empty' do
+        data = {'en' => {'' => 'Empty key.'}} 
+        @backend.send(:memoize_merge!, data) # 'interning empty string'
+        @backend.send(:memoized_lookup).should be_empty
+      end
+
     end
 
   end

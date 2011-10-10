@@ -88,6 +88,7 @@ module GhostReader
             end
           rescue => ex
             config.logger.error "Exception in retriever thread: #{ex}"
+            config.logger.debug ex.backtrace.join("\n")
           end
         end
       end
@@ -110,12 +111,9 @@ module GhostReader
               else
                 config.logger.debug "Reporting request omitted, not yet initialized, waiting for intial request."
               end
-              config.logger.error "Reporter finished."
             rescue => ex
-              config.logger.error "Exception in reporter thread: #{ex}"
-              config.logger.error e.backtrace
-              puts e.backtrace
-              config.logger.error '-'*60
+              config.logger.error "Exception in reporter thread: #{ex}" 
+              config.logger.debug ex.backtrace.join("\n")
             end
           end
         end
@@ -124,8 +122,13 @@ module GhostReader
       # a wrapper for I18n::Backend::Flatten#flatten_translations
       def flatten_translations_for_all_locales(data)
         data.inject({}) do |result, key_value|
-          key, value = key_value
-          result.merge key => flatten_translations(key, value, true, false)
+          begin
+            key, value = key_value
+            result.merge key => flatten_translations(key, value, true, false)
+          rescue ArgumentError => ae
+            config.logger.error "Error: #{ae}"
+            result
+          end
         end
       end
 
