@@ -54,21 +54,25 @@ module GhostReader
     end
 
     def service
-      @service ||= Excon.new(address)
+      Excon.new(address)
     end
 
     def address
       raise 'no api_key provided' if config.api_key.nil?
-      @address ||= config.uri.sub(':api_key', config.api_key)
+      @address ||= config.uri.
+        sub(':protocol', config.protocol).
+        sub(':host', config.host).
+        sub(':api_key', config.api_key)
     end
 
     # Wrapper method for retrying the connection
     #   :method - http method (post and get supported at the moment)
     #   :params - parameters sent to the service (excon)
     def connect_with_retry(method = :get, params = {})
+      config.logger.debug "Request: #{method} #{params.inspect}"
       retries = self.config.connection_retries
       while (retries > 0) do
-        response = service.send(method, params)
+        response = service.request(params.merge(:method => method))
 
         if response.status == 408
           config.logger.error "Connection time-out. Retrying... #{retries}"
@@ -82,8 +86,10 @@ module GhostReader
 
     def default_config
       {
-        :uri => 'http://ghost.panter.ch/api/:api_key/translations.json',
+        :protocol => 'http'
+        :host => 'ghost.panter.ch',
         :api_key => nil,
+        :uri => ':protocol://:host/api/:api_key/translations.json',
         :connection_retries => 3
       }
     end

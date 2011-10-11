@@ -1,10 +1,15 @@
 require 'rubygems'
 require 'excon'
 require 'json'
+require 'ruby-debug'
 
 # Excon.ssl_verify_peer = false
 
-address = 'http://0.0.0.0:3000/api/91885ca9ec4feb9b2ed2423cdbdeda32/translations.json'
+host = '0.0.0.0:3001'
+host = 'ghost.panter.ch'
+api_key = '91885ca9ec4feb9b2ed2423cdbdeda32' # dummy local
+api_key = 'e0e948efc3606e00c4b981bb2d3f7463' # CSP Live
+address = "http://#{host}/api/#{api_key}/translations.json"
 excon = Excon.new(address)
 puts
 
@@ -33,6 +38,7 @@ puts
 
 puts "(3) Incremental request... (GET with If-Modified-Since)"
 headers = { 'If-Modified-Since' => @last_modified }
+#debugger
 response = excon.get(:headers => headers)
 puts
 puts "  Status:         #{response.status}"

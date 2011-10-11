@@ -8,14 +8,6 @@ require 'i18n/backend/flatten'
 module GhostReader
   class Backend
 
-    module DebugLookup
-      def lookup(*args)
-        config.logger.debug "Lookup: #{args.inspect}"
-        # debugger
-        super
-      end
-    end
-
     module Implementation
 
       attr_accessor :config, :missings
@@ -82,6 +74,7 @@ module GhostReader
                 end
               rescue => ex
                 config.logger.error "Exception in retriever loop: #{ex}"
+                config.logger.debug ex.backtrace.join("\n")
               end
             end
           rescue => ex
@@ -107,7 +100,8 @@ module GhostReader
                   config.logger.debug "Reporting request omitted, nothing to report."
                 end
               else
-                config.logger.debug "Reporting request omitted, not yet initialized, waiting for intial request."
+                config.logger.debug "Reporting request omitted, not yet initialized," +
+                  " waiting for intial request."
               end
             rescue => ex
               config.logger.error "Exception in reporter thread: #{ex}" 
@@ -143,7 +137,8 @@ module GhostReader
           :report_interval => 10,
           :fallback => nil, # a I18n::Backend (mandatory)
           :logfile => nil, # a path
-          :log_level => nil, # Log level, the options are Config::(FATAL, ERROR, WARN, INFO and DEBUG)           (http://www.ruby-doc.org/stdlib/libdoc/logger/rdoc/Logger.html)
+          # see http://www.ruby-doc.org/stdlib/libdoc/logger/rdoc/Logger.html
+          :log_level => nil, # Log levels: FATAL, ERROR, WARN, INFO and DEBUG
           :service => {} # nested hash, see GhostReader::Client#default_config
         }
       end
@@ -153,7 +148,6 @@ module GhostReader
     include Implementation
     include I18n::Backend::Memoize # provides @memoized_lookup
     include I18n::Backend::Flatten # provides #flatten_translations
-    include DebugLookup
   end
 end
 
