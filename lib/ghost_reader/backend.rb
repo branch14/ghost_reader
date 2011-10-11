@@ -1,9 +1,10 @@
 require 'logger'
 require 'ostruct'
-require 'i18n/backend/transliterator' # i18n/backend/base fails to require this
-require 'i18n/backend/base'
-require 'i18n/backend/memoize'
-require 'i18n/backend/flatten'
+require 'i18n'
+#require 'i18n/backend/transliterator' # i18n/backend/base fails to require this
+#require 'i18n/backend/base'
+#require 'i18n/backend/memoize'
+#require 'i18n/backend/flatten'
 
 module GhostReader
   class Backend

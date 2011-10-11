@@ -1,4 +1,6 @@
 require 'spec_helper'
+require File.expand_path(File.join(%w(.. .. .. lib ghost_reader)), __FILE__)
+
 
 Excon.mock = true
 

@@ -86,7 +86,7 @@ module GhostReader
 
     def default_config
       {
-        :protocol => 'http'
+        :protocol => 'http',
         :host => 'ghost.panter.ch',
         :api_key => nil,
         :uri => ':protocol://:host/api/:api_key/translations.json',
