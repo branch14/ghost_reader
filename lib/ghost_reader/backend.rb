@@ -26,6 +26,10 @@ module GhostReader
         config.logger.info "Initialized GhostReader backend."
       end
 
+      def available_locales
+        ( memoized_lookup.keys + config.fallback.available_locales ).uniq
+      end
+
       protected
 
       # this won't be called if memoize kicks in
@@ -143,7 +147,7 @@ module GhostReader
 
     include I18n::Backend::Base
     include Implementation
-    include I18n::Backend::Memoize # provides @memoized_lookup
+    include I18n::Backend::Memoize # provides #memoized_lookup
     include I18n::Backend::Flatten # provides #flatten_translations
   end
 end

@@ -40,6 +40,19 @@ describe GhostReader::Backend do
       result.has_key?(:one).should be_true
     end
 
+    it 'should nicely respond to available_locales' do
+      @backend.should respond_to(:available_locales)
+
+      expected = [:en, :de]
+      @fallback.stub!(:available_locales).and_return(expected)
+      @backend.available_locales.should eq(expected)
+
+      # FIXME
+      # @backend.send(:memoize_merge!, :it => {'dummay' => 'Dummy'})
+      # @backend.translate(:it, 'this.is.a.test')
+      # @backend.available_locales.should eq([:it, :en, :de])
+    end
+
     context 'nicely merge data into memoized_hash' do
 
       it 'should work with valid data' do
