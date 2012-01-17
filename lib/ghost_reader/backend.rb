@@ -9,6 +9,9 @@ module GhostReader
 
       attr_accessor :config, :missings
 
+      # exposed for testing & debugging
+      attr_reader :retriever, :reporter
+
       # for options see code of default_config
       def initialize(conf={})
         self.config = OpenStruct.new(default_config.merge(conf))
@@ -16,7 +19,7 @@ module GhostReader
         config.logger = Logger.new(config.logfile || STDOUT)
         config.logger.level = config.log_level || Logger::WARN
         config.service[:logger] ||= config.logger
-        config.client = Client.new(config.service)
+        config.client ||= Client.new(config.service)
         unless config.no_auto_spawn
           config.logger.debug "GhostReader spawning agents."
           spawn_retriever
@@ -35,17 +38,26 @@ module GhostReader
       # this won't be called if memoize kicks in
       def lookup(locale, key, scope = [], options = {})
         raise 'no fallback given' if config.fallback.nil?
-        config.fallback.translate(locale, key, options).tap do |result|
-          # TODO results which are hashes need to be tracked disaggregated
-          track({ key => { locale => { 'default' => result } } }) unless result.is_a?(Hash)
-        end
+        config.logger.debug "lookup: #{locale} #{key} #{scope.inspect} #{options.inspect}"
+        
+        result = config.fallback.translate(locale, key, options)
+        config.logger.debug "fallback result: #{result.inspect}"
+        return result
+      rescue Exception => ex
+        config.logger.debug "fallback.translate raised exception: #{ex}"
+      ensure # make sure everything is tracked
+        # TODO results which are hashes need to be tracked disaggregated
+        track({ key => { locale.to_s => { 'default' => result } } }) unless result.is_a?(Hash)
+        ex.nil? ? result : raise(ex)
       end
 
       def track(missings)
         return if self.missings.nil? # not yet initialized
+        config.logger.debug "tracking: #{missings.inspect}"
         self.missings.deep_merge!(missings)
       end
 
+      # data, e.g. {'en' => {'this' => {'is' => {'a' => {'test' => 'This is a test.'}}}}}
       def memoize_merge!(data, options={ :method => :merge! })
         flattend = flatten_translations_for_all_locales(data)
         symbolized_flattend = symbolize_keys(flattend)
@@ -55,7 +67,7 @@ module GhostReader
       # performs initial and incremental requests
       def spawn_retriever
         config.logger.debug "Spawning retriever."
-        Thread.new do
+        @retriever = Thread.new do
           begin
             config.logger.debug "Performing initial request."
             response = config.client.initial_request
@@ -88,7 +100,7 @@ module GhostReader
       # performs reporting requests
       def spawn_reporter
         config.logger.debug "Spawning reporter."
-        Thread.new do
+        @reporter = Thread.new do
           until false
             begin
               sleep config.report_interval

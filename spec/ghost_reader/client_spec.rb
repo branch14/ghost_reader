@@ -1,6 +1,4 @@
 require 'spec_helper'
-require File.expand_path(File.join(%w(.. .. .. lib ghost_reader)), __FILE__)
-
 
 Excon.mock = true
 
@@ -12,6 +10,8 @@ end
 
 describe GhostReader::Client do
 
+  let(:dev_null) { File.new('/dev/null', 'w') }
+
   context 'on class level' do
     it 'should nicely initialize' do
       GhostReader::Client.new.should be_an_instance_of(GhostReader::Client)
@@ -20,7 +20,10 @@ describe GhostReader::Client do
 
   context 'a initialized client' do
 
-    let(:client) { GhostReader::Client.new(:api_key => 'some+api_key') }
+    let(:client) do
+      GhostReader::Client.new( :logfile => dev_null,
+                               :api_key => 'some+api_key' )
+    end
 
     before(:each) { Excon.kill_stubs! }
 
