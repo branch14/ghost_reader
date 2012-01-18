@@ -21,12 +21,12 @@ module GhostReader
         config.service[:logger] ||= config.logger
         config.client ||= Client.new(config.service)
         unless config.no_auto_spawn
-          config.logger.debug "GhostReader spawning agents."
+          log "GhostReader spawning agents."
           spawn_retriever
           spawn_reporter
-          config.logger.debug "GhostReader spawned its agents."
+          log "GhostReader spawned its agents."
         end
-        config.logger.info "Initialized GhostReader backend."
+        log "Initialized GhostReader backend.", :info
       end
 
       def available_locales
@@ -38,13 +38,13 @@ module GhostReader
       # this won't be called if memoize kicks in
       def lookup(locale, key, scope = [], options = {})
         raise 'no fallback given' if config.fallback.nil?
-        config.logger.debug "lookup: #{locale} #{key} #{scope.inspect} #{options.inspect}"
+        log "lookup: #{locale} #{key} #{scope.inspect} #{options.inspect}"
         
         result = config.fallback.translate(locale, key, options)
-        config.logger.debug "fallback result: #{result.inspect}"
+        log "fallback result: #{result.inspect}"
         return result
       rescue Exception => ex
-        config.logger.debug "fallback.translate raised exception: #{ex}"
+        log "fallback.translate raised exception: #{ex}"
       ensure # make sure everything is tracked
         # TODO results which are hashes need to be tracked disaggregated
         track({ key => { locale.to_s => { 'default' => result } } }) unless result.is_a?(Hash)
@@ -53,9 +53,9 @@ module GhostReader
 
       def track(missing)
         return if missings.nil? # not yet initialized
-        config.logger.debug "[#{$$}] tracking: #{missing.inspect}"
+        log "tracking: #{missing.inspect}"
         self.missings.deep_merge!(missing)
-        config.logger.debug "[#{$$}] missings: #{missings.inspect}"
+        log "missings: #{missings.inspect}"
       end
 
       # data, e.g. {'en' => {'this' => {'is' => {'a' => {'test' => 'This is a test.'}}}}}
@@ -67,60 +67,59 @@ module GhostReader
 
       # performs initial and incremental requests
       def spawn_retriever
-        config.logger.debug "Spawning retriever."
+        log "Spawning retriever."
         @retriever = Thread.new do
           begin
-            config.logger.debug "Performing initial request."
+            log "Performing initial request."
             response = config.client.initial_request
             memoize_merge! response[:data]
             self.missings = {} # initialized
-            config.logger.info "Initial request successfull."
+            log "Initial request successfull.", :info
             until false
               begin
                 sleep config.retrieval_interval
                 response = config.client.incremental_request
                 if response[:status] == 200
-                  config.logger.info "Incremental request with data."
-                  config.logger.debug "Data: #{response[:data].inspect}"
+                  log "Incremental request with data.", :info
+                  log "Data: #{response[:data].inspect}"
                   memoize_merge! response[:data], :method => :deep_merge!
                 else
-                  config.logger.debug "Incremental request, but no data."
+                  log "Incremental request, but no data."
                 end
               rescue => ex
-                config.logger.error "Exception in retriever loop: #{ex}"
-                config.logger.debug ex.backtrace.join("\n")
+                log "Exception in retriever loop: #{ex}", :error
+                log ex.backtrace.join("\n")
               end
             end
           rescue => ex
-            config.logger.error "Exception in retriever thread: #{ex}"
-            config.logger.debug ex.backtrace.join("\n")
+            log "Exception in retriever thread: #{ex}", :error
+            log ex.backtrace.join("\n")
           end
         end
       end
 
       # performs reporting requests
       def spawn_reporter
-        config.logger.debug "Spawning reporter."
+        log "Spawning reporter."
         @reporter = Thread.new do
           until false
             begin
               sleep config.report_interval
               unless self.missings.nil?
                 unless self.missings.empty?
-                  config.logger.info "[#{$$}] Reporting request with % missings." %
-                    self.missings.keys.size
+                  log "Reporting request with % missings." % self.missings.keys.size, :info
                   config.client.reporting_request(missings)
                   missings.clear
                 else
-                  config.logger.debug "[#{$$}] Reporting request omitted, nothing to report."
+                  log "Reporting request omitted, nothing to report."
                 end
               else
-                config.logger.debug "Reporting request omitted, not yet initialized," +
+                log "Reporting request omitted, not yet initialized," +
                   " waiting for intial request."
               end
             rescue => ex
-              config.logger.error "Exception in reporter thread: #{ex}" 
-              config.logger.debug ex.backtrace.join("\n")
+              log "Exception in reporter thread: #{ex}", :error
+              log ex.backtrace.join("\n")
             end
           end
         end
@@ -133,7 +132,7 @@ module GhostReader
             key, value = key_value
             result.merge key => flatten_translations(key, value, true, false)
           rescue ArgumentError => ae
-            config.logger.error "Error: #{ae}"
+            log "Error: #{ae}", :error
             result
           end
         end
@@ -157,6 +156,11 @@ module GhostReader
           :service => {} # nested hash, see GhostReader::Client#default_config
         }
       end
+
+      def log(msg, level=:debug)
+        config.logger.send(level, "[#{$$}] #{msg}")
+      end
+
     end
 
     include I18n::Backend::Base
