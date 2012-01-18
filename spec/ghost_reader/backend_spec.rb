@@ -134,8 +134,9 @@ describe GhostReader::Backend do
     end
 
     it 'should track lookups which raise exceptions' do
-      backend.retriever.should be_alive
-      backend.missings.should_not be_nil
+      # backend.retriever.should be_alive
+      backend.missings = {} # fake initialize
+      backend.missings.should be_empty
       expect { backend.translate(:de, :asdf) }.to raise_error('missing translation')
       backend.missings.should_not be_empty
     end

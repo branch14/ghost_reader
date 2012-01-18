@@ -20,12 +20,13 @@ module GhostReader
         config.logger.level = config.log_level || Logger::WARN
         config.service[:logger] ||= config.logger
         config.client ||= Client.new(config.service)
-        unless config.no_auto_spawn
-          log "GhostReader spawning agents."
-          spawn_retriever
-          spawn_reporter
-          log "GhostReader spawned its agents."
-        end
+        # unless config.no_auto_spawn
+        #   log "GhostReader spawning agents."
+        #   spawn_retriever
+        #   spawn_reporter
+        #   log "GhostReader spawned its agents."
+        # end
+        @report_ts = @retrieval_ts = Time.now
         log "Initialized GhostReader backend.", :info
       end
 
@@ -42,20 +43,56 @@ module GhostReader
         
         result = config.fallback.translate(locale, key, options)
         log "fallback result: #{result.inspect}"
-        return result
       rescue Exception => ex
         log "fallback.translate raised exception: #{ex}"
       ensure # make sure everything is tracked
         # TODO results which are hashes need to be tracked disaggregated
         track({ key => { locale.to_s => { 'default' => result } } }) unless result.is_a?(Hash)
-        ex.nil? ? result : raise(ex)
+        report_and_retrieve
+        raise(ex) unless ex.nil?
+        return result
       end
 
       def track(missing)
         return if missings.nil? # not yet initialized
         log "tracking: #{missing.inspect}"
         self.missings.deep_merge!(missing)
-        log "missings: #{missings.inspect}"
+        log "# of missings: #{missings.keys.size}"
+      end
+
+      def report_and_retrieve
+        initialize_retrieval if missings.nil?
+        diff = Time.now - @report_ts
+        if diff > config.report_interval
+          threadify do
+            log "Kick off report. #{missings.inspect}", :info
+            @report_ts = Time.now
+            report
+            @report_ts = Time.now
+          end
+        else
+          log "Skipping report. #{diff}"
+        end
+
+        diff = Time.now - @retrieval_ts
+        if diff > config.retrieval_interval
+          threadify do
+            log "Kick off retrieval."
+            @retrieval_ts = Time.now
+            retrieve
+            @retrieval_ts = Time.now
+          end
+        else
+          log "Skipping retrieval. #{diff}"
+        end
+      end
+
+      def threadify(&block)
+        if config.no_threads
+          block.call
+        else
+          Thread.new { block.call }
+        end
       end
 
       # data, e.g. {'en' => {'this' => {'is' => {'a' => {'test' => 'This is a test.'}}}}}
@@ -65,64 +102,71 @@ module GhostReader
         memoized_lookup.send(options[:method], symbolized_flattend)
       end
 
-      # performs initial and incremental requests
-      def spawn_retriever
-        log "Spawning retriever."
-        @retriever = Thread.new do
-          begin
-            log "Performing initial request."
-            response = config.client.initial_request
-            memoize_merge! response[:data]
-            self.missings = {} # initialized
-            log "Initial request successfull.", :info
-            until false
-              begin
-                sleep config.retrieval_interval
-                response = config.client.incremental_request
-                if response[:status] == 200
-                  log "Incremental request with data.", :info
-                  log "Data: #{response[:data].inspect}"
-                  memoize_merge! response[:data], :method => :deep_merge!
-                else
-                  log "Incremental request, but no data."
-                end
-              rescue => ex
-                log "Exception in retriever loop: #{ex}", :error
-                log ex.backtrace.join("\n")
-              end
-            end
-          rescue => ex
-            log "Exception in retriever thread: #{ex}", :error
-            log ex.backtrace.join("\n")
-          end
-        end
+      # # performs initial and incremental requests
+      # def spawn_retriever
+      #   log "Spawning retriever."
+      #   @retriever = Thread.new do
+      #     initialize_retrieval
+      #     until false
+      #       sleep config.retrieval_interval
+      #       retrieve
+      #     end
+      #   end
+      # end
+
+      def initialize_retrieval
+        log "Performing initial request."
+        response = config.client.initial_request
+        memoize_merge! response[:data]
+        self.missings = {} # initialized                                                              
+        log "Initial request successfull.", :info
+      rescue => ex
+        log "Exception initializing retrieval: #{ex}", :error
+        log ex.backtrace.join("\n"), :error
       end
 
-      # performs reporting requests
-      def spawn_reporter
-        log "Spawning reporter."
-        @reporter = Thread.new do
-          until false
-            begin
-              sleep config.report_interval
-              unless self.missings.nil?
-                unless self.missings.empty?
-                  log "Reporting request with % missings." % self.missings.keys.size, :info
-                  config.client.reporting_request(missings)
-                  missings.clear
-                else
-                  log "Reporting request omitted, nothing to report."
-                end
-              else
-                log "Reporting request omitted, not yet initialized," +
-                  " waiting for intial request."
-              end
-            rescue => ex
-              log "Exception in reporter thread: #{ex}", :error
-              log ex.backtrace.join("\n")
-            end
-          end
+      def retrieve
+        response = config.client.incremental_request
+        if response[:status] == 200
+          log "Incremental request with data.", :info
+          log "Data: #{response[:data].inspect}"
+          memoize_merge! response[:data], :method => :deep_merge!
+        else
+          log "Incremental request, but no data."
         end
+      rescue => ex
+        log "Exception in retrieval: #{ex}", :error
+        log ex.backtrace.join("\n"), :error
+      end
+
+      # # performs reporting requests
+      # def spawn_reporter
+      #   log "Spawning reporter."
+      #   @reporter = Thread.new do
+      #     until false
+      #       sleep config.report_interval
+      #       report
+      #     end
+      #   end
+      # end
+
+      def report
+        unless self.missings.nil?
+          unless self.missings.empty?
+            log "Reporting request with #{self.missings.keys.size} missings.", :info
+            config.client.reporting_request(missings)
+            self.missings.clear
+            log "Missings emptied.", :info
+          else
+            log "Reporting request omitted, nothing to report."
+          end
+        else
+          log "Reporting request omitted, not yet initialized," +
+            " waiting for intial request."
+        end
+      rescue => ex
+        log "Exception in report: #{ex}", :error
+        log ex.backtrace.join("\n")
       end
 
       # a wrapper for I18n::Backend::Flatten#flatten_translations
