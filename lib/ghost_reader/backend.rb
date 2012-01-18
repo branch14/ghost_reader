@@ -53,9 +53,9 @@ module GhostReader
 
       def track(missing)
         return if missings.nil? # not yet initialized
-        config.logger.debug "tracking: #{missing.inspect}"
+        config.logger.debug "[#{$$}] tracking: #{missing.inspect}"
         self.missings.deep_merge!(missing)
-        config.logger.debug "missings: #{missings.inspect}"
+        config.logger.debug "[#{$$}] missings: #{missings.inspect}"
       end
 
       # data, e.g. {'en' => {'this' => {'is' => {'a' => {'test' => 'This is a test.'}}}}}
@@ -107,11 +107,12 @@ module GhostReader
               sleep config.report_interval
               unless self.missings.nil?
                 unless self.missings.empty?
-                  config.logger.info "Reporting request with #{self.missings.keys.size} missings."
+                  config.logger.info "[#{$$}] Reporting request with % missings." %
+                    self.missings.keys.size
                   config.client.reporting_request(missings)
                   missings.clear
                 else
-                  config.logger.debug "Reporting request omitted, nothing to report."
+                  config.logger.debug "[#{$$}] Reporting request omitted, nothing to report."
                 end
               else
                 config.logger.debug "Reporting request omitted, not yet initialized," +
