@@ -51,10 +51,11 @@ module GhostReader
         ex.nil? ? result : raise(ex)
       end
 
-      def track(missings)
-        return if self.missings.nil? # not yet initialized
-        config.logger.debug "tracking: #{missings.inspect}"
-        self.missings.deep_merge!(missings)
+      def track(missing)
+        return if missings.nil? # not yet initialized
+        config.logger.debug "tracking: #{missing.inspect}"
+        self.missings.deep_merge!(missing)
+        config.logger.debug "missings: #{missings.inspect}"
       end
 
       # data, e.g. {'en' => {'this' => {'is' => {'a' => {'test' => 'This is a test.'}}}}}
