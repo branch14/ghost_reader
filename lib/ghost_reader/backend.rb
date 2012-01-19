@@ -9,9 +9,6 @@ module GhostReader
 
       attr_accessor :config, :missings
 
-      # exposed for testing & debugging
-      attr_reader :retriever, :reporter
-
       # for options see code of default_config
       def initialize(conf={})
         self.config = OpenStruct.new(default_config.merge(conf))
@@ -20,12 +17,6 @@ module GhostReader
         config.logger.level = config.log_level || Logger::WARN
         config.service[:logger] ||= config.logger
         config.client ||= Client.new(config.service)
-        # unless config.no_auto_spawn
-        #   log "GhostReader spawning agents."
-        #   spawn_retriever
-        #   spawn_reporter
-        #   log "GhostReader spawned its agents."
-        # end
         @report_ts = @retrieval_ts = Time.now
         log "Initialized GhostReader backend.", :info
       end
@@ -41,10 +32,10 @@ module GhostReader
         raise 'no fallback given' if config.fallback.nil?
         log "lookup: #{locale} #{key} #{scope.inspect} #{options.inspect}"
         
-        result = config.fallback.translate(locale, key, options)
+        result = config.fallback.lookup(locale, key, scope, options)
         log "fallback result: #{result.inspect}"
       rescue Exception => ex
-        log "fallback.translate raised exception: #{ex}"
+        log "fallback.lookup raised exception: #{ex}"
       ensure # make sure everything is tracked
         # TODO results which are hashes need to be tracked disaggregated
         track({ key => { locale.to_s => { 'default' => result } } }) unless result.is_a?(Hash)

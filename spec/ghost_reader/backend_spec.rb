@@ -25,7 +25,7 @@ describe GhostReader::Backend do
 
     let(:fallback) do
       mock("FallbackBackend").tap do |fallback|
-        fallback.stub!(:translate).and_return(translation)
+        fallback.stub!(:lookup).and_return(translation)
       end
     end
 
@@ -37,7 +37,7 @@ describe GhostReader::Backend do
 
     it 'should use the given fallback' do
       backend.config.fallback.should be(fallback)
-      fallback.should_receive(:translate)
+      fallback.should_receive(:lookup)
       backend.translate(:en, 'this.is.a.test').should eq(translation)
     end
 
@@ -48,7 +48,7 @@ describe GhostReader::Backend do
     end
 
     it 'should use memoization' do
-      fallback.should_receive(:translate).exactly(1)
+      fallback.should_receive(:lookup).exactly(1)
       2.times { backend.translate(:en, 'this.is.a.test').should eq(translation) }
     end
 
@@ -116,7 +116,7 @@ describe GhostReader::Backend do
   context 'GhostReader set up with raising fallback' do
     let(:fallback) do
       mock("FallbackBackend").tap do |fallback|
-        fallback.stub!(:translate) do
+        fallback.stub!(:lookup) do
           raise 'missing translation'
         end
       end
