@@ -24,7 +24,7 @@ module GhostReader
     # returns true if redirected, false otherwise
     def reporting_request(data)
       response = connect_with_retry(:post, :body => "data=#{data.to_json}")
-      config.logger.error "Reporting request not redirected" unless response.status == 302
+      log("Reporting request not redirected", :error) unless response.status == 302
       { :status => response.status }
     end
 
@@ -41,7 +41,7 @@ module GhostReader
 
     # this is just a wrapper to have a log message when the field is set
     def last_modified=(value)
-      config.logger.debug "Last-Modified: #{value}"
+      log "Last-Modified: #{value}"
       @last_modified = value
     end
 
@@ -61,21 +61,21 @@ module GhostReader
       raise 'no api_key provided' if config.api_key.nil?
       @address ||= config.uri.
         sub(':protocol', config.protocol).
-        sub(':host', config.host).
-        sub(':api_key', config.api_key)
+        sub(':host',     config.host).
+        sub(':api_key',  config.api_key)
     end
 
     # Wrapper method for retrying the connection
     #   :method - http method (post and get supported at the moment)
     #   :params - parameters sent to the service (excon)
     def connect_with_retry(method = :get, params = {})
-      config.logger.debug "Request: #{method} #{params.inspect}"
+      log "Request: #{method} #{params.inspect}"
       retries = self.config.connection_retries
       while (retries > 0) do
         response = service.request(params.merge(:method => method))
 
         if response.status == 408
-          config.logger.error "Connection time-out. Retrying... #{retries}"
+          log "Connection time-out. Retrying... #{retries}", :error
           retries -= 1
         else
           retries = 0 # There is no timeout, no need to retry
@@ -93,5 +93,10 @@ module GhostReader
         :connection_retries => 3
       }
     end
+
+    def log(msg, level=:debug)
+      config.logger.send(level, "[#{$$}] #{msg}")
+    end
+
   end
 end

@@ -65,7 +65,7 @@ module GhostReader
         diff = Time.now - @report_ts
         if diff > config.report_interval
           threadify do
-            log "Kick off report. #{missings.inspect}", :info
+            log "Kick off report. #{missings.inspect}"
             @report_ts = Time.now
             report
             @report_ts = Time.now
@@ -102,18 +102,6 @@ module GhostReader
         memoized_lookup.send(options[:method], symbolized_flattend)
       end
 
-      # # performs initial and incremental requests
-      # def spawn_retriever
-      #   log "Spawning retriever."
-      #   @retriever = Thread.new do
-      #     initialize_retrieval
-      #     until false
-      #       sleep config.retrieval_interval
-      #       retrieve
-      #     end
-      #   end
-      # end
-
       def initialize_retrieval
         log "Performing initial request."
         response = config.client.initial_request
@@ -132,23 +120,12 @@ module GhostReader
           log "Data: #{response[:data].inspect}"
           memoize_merge! response[:data], :method => :deep_merge!
         else
-          log "Incremental request, but no data."
+          log "Incremental request, but no data.", :info
         end
       rescue => ex
         log "Exception in retrieval: #{ex}", :error
         log ex.backtrace.join("\n"), :error
       end
-
-      # # performs reporting requests
-      # def spawn_reporter
-      #   log "Spawning reporter."
-      #   @reporter = Thread.new do
-      #     until false
-      #       sleep config.report_interval
-      #       report
-      #     end
-      #   end
-      # end
 
       def report
         unless self.missings.nil?
@@ -156,7 +133,7 @@ module GhostReader
             log "Reporting request with #{self.missings.keys.size} missings.", :info
             config.client.reporting_request(missings)
             self.missings.clear
-            log "Missings emptied.", :info
+            log "Missings emptied."
           else
             log "Reporting request omitted, nothing to report."
           end
