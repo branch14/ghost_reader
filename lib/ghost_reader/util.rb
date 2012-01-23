@@ -6,18 +6,14 @@ module GhostReader
     class << self
 
       def poll(headers={})
-        p config_file
         return unless File.exist?(config_file)
         headers['If-Modified-Since'] = File.mtime(translation_file) if File.exist?(translation_file)
         headers.reverse_merge! :method => :get
-        p headers
-        p config
         excon = Excon.new(config['static'])
         response = excon.request(headers)
-        p response
         if response.status == 200
           translation_file response.body
-          restart!
+          passenger_restart!
         end
       end
 
@@ -31,7 +27,7 @@ module GhostReader
         File.join(Rails.root, 'config', 'ghost_reader.yml')
       end
 
-      def restart!
+      def passenger_restart!
         FileUtils.touch(File.join(Rails.root, 'tmp', 'restart.txt'))
       end
 
