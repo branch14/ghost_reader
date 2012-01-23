@@ -2,15 +2,17 @@ GhostReader
 ===========
 
 GhostReader is an alternative I18n backend which makes use of the
-GhostWriter service.
+GhostWriter service (https://github.com/branch14/ghost_writer).
 
 ## Usage
 
 ### Gemfile
 
-    gem 'ghost_reader', '~> 1.1.1'
+    gem 'ghost_reader'
 
-### config/initializers/ghost_reader.rb
+### For development & staging
+
+#### config/initializers/ghost_reader.rb
 
     unless Rails.env.test?
       config = {
@@ -26,7 +28,7 @@ GhostWriter service.
       I18n.backend = GhostReader::Backend.new(config)
     end
 
-## Configuration
+#### Configuration
 
 * 'report interval' is the delay in seconds between subsequent POST
   requests (reporting requests), which report missing translations. 
@@ -42,6 +44,24 @@ GhostWriter service.
   - 'protocol' is either 'http' or 'https'
   - 'uri' is the complete uri with the folling keys, which will be
     replaced: :protocol, :host, :api_key
+
+### For Live
+
+In a live system you typically don't want to depend on another system,
+so we'll just go with a static export of translations.
+
+    # specify where to get the static file from
+    echo 'static: https://<ghostservice>/system/static/<apikey>.yml' >> config/ghost_reader.yml
+
+    # in a cron job do this
+    rake ghost_reader:poll
+
+The rake task will rewrite config/locales/ghost_reader.yml if it
+changed and touch tmp/restart.txt to make passenger restart the
+application.
+
+It's a good idea to delete all other translations files on this
+system.
 
 ## TODO
 
