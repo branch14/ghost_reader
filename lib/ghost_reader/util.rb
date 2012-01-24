@@ -18,17 +18,17 @@ module GhostReader
       end
 
       def translation_file(content=nil)
-        path = File.join(Rails.root, 'config', 'locales', 'ghost_reader.yml')
+        path = File.join(::Rails.root, 'config', 'locales', 'ghost_reader.yml')
         return path if content.nil?
         File.open(path, 'w') { |f| f.puts content }
       end
 
       def config_file
-        File.join(Rails.root, 'config', 'ghost_reader.yml')
+        File.join(::Rails.root, 'config', 'ghost_reader.yml')
       end
 
       def passenger_restart!
-        FileUtils.touch(File.join(Rails.root, 'tmp', 'restart.txt'))
+        FileUtils.touch(File.join(::Rails.root, 'tmp', 'restart.txt'))
       end
 
       def config

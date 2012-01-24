@@ -19,7 +19,7 @@ namespace :ghost_reader do
   #   end
   # 
   #   yaml_data.each_pair do |key,value|
-  #     outfile = Rails.root.join("config", "locales",
+  #     outfile = ::Rails.root.join("config", "locales",
   #                               "#{key.to_s}.yml")
   #     begin
   #       puts "Deleting old translations: #{outfile}"
@@ -57,7 +57,7 @@ namespace :ghost_reader do
   # 
   #   # TODO: this should work only when the ghost_reader is introduced as gem
   #   infile = 'templates/ghost_reader.rb'
-  #   outdir = Rails.root.join("config", "initializers")
+  #   outdir = ::Rails.root.join("config", "initializers")
   # 
   #   puts "Installing ghost_reader.rb initializer..."
   #   FileUtils.copy_file(infile, outdir)

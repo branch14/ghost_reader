@@ -32,7 +32,7 @@ module GhostReader
         raise 'no fallback given' if config.fallback.nil?
         log "lookup: #{locale} #{key} #{scope.inspect} #{options.inspect}"
         
-        result = config.fallback.lookup(locale, key, scope, options)
+        result = config.fallback.send(:lookup, locale, key, scope, options)
         log "fallback result: #{result.inspect}"
       rescue Exception => ex
         log "fallback.lookup raised exception: #{ex}"
